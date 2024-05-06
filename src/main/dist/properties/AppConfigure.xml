@@ -15,7 +15,7 @@
         </property>
     </bean>
     <bean id="index" class="edu.mcw.scge.platform.index.Index"/>
-    <bean id="indexAdmin" class="edu.mcw.scge.platform.index.Indexer">
+    <bean id="indexAdmin" class="edu.mcw.scge.platform.index.IndexAdmin">
         <property name="index" ref="index"/>
     </bean>
 

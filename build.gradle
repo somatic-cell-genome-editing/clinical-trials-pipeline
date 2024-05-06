@@ -53,6 +53,11 @@ dependencies {
 // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.17.0'
 
+    // https://mvnrepository.com/artifact/org.jsonschema2pojo/jsonschema2pojo-core
+    implementation group: 'org.jsonschema2pojo', name: 'jsonschema2pojo-core', version: '1.2.1'
+
+    implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '3.9'
+
 }
 task update_core(type:Copy){
     // from file("C:/Users/jthota/Documents/git/scge-core/build/libs/scge-core-1.0.jar")
