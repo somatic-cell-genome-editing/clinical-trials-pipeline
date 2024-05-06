@@ -1,9 +1,7 @@
 package edu.mcw.scge.platform.index;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 import edu.mcw.scge.services.es.ESClient;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
@@ -16,13 +14,12 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.xcontent.XContentType;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
 
 import java.io.IOException;
 import java.util.Date;
 
-public class Indexer {
+public class IndexAdmin {
 
     private Index index;
     public void createIndex(String mappings, String type) throws Exception {
@@ -88,7 +85,7 @@ public class Indexer {
             Index.setNewAlias(index);
 
     }
-    public void indexDocuments(String str) throws IOException {
+    public void indexDocuments(Object str) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
@@ -101,11 +98,7 @@ public class Indexer {
 
 
         try {
-
-                    bulkRequest.add(new IndexRequest(Index.getNewAlias()).source(str, XContentType.JSON));
-
-
-
+            bulkRequest.add(new IndexRequest(Index.getNewAlias()).source(str.toString(), XContentType.JSON));
         } catch (Exception e) {
             e.printStackTrace();
         }

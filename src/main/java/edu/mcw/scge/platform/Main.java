@@ -1,7 +1,8 @@
 package edu.mcw.scge.platform;
 
 import edu.mcw.scge.platform.index.Index;
-import edu.mcw.scge.platform.index.Indexer;
+import edu.mcw.scge.platform.index.IndexAdmin;
+import edu.mcw.scge.platform.index.ProcessFile;
 import edu.mcw.scge.process.Utils;
 import edu.mcw.scge.services.es.ESClient;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
@@ -23,11 +24,12 @@ import java.util.List;
 
 public class Main {
     private String version;
-    private Indexer admin;
+    private IndexAdmin admin;
     private Index index;
     String command;
     String env;
-    Indexer indexer=new Indexer();
+    String source;
+    IndexAdmin indexer=new IndexAdmin();
     private static List environments;
 
     public static void main(String[] args) throws IOException {
@@ -36,6 +38,7 @@ public class Main {
         Main manager= (Main) bf.getBean("manager");
         manager.command=args[0];
         manager.env=args[1];
+        manager.source=args[2];
         String index="scge_platform_search";
         List<String> indices= new ArrayList<>();
     //    ESClient es= (ESClient) bf.getBean("client");
@@ -66,7 +69,17 @@ public class Main {
         long start = System.currentTimeMillis();
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
-        download();
+        switch (source){
+            case  "api":
+                download();
+                break;
+            case "file":
+                processFile("data/GT_tracker_050124.xlsx");
+                break;
+            default:
+
+        }
+
         String clusterStatus = this.getClusterHealth(Index.getNewAlias());
         if (!clusterStatus.equalsIgnoreCase("ok")) {
             System.out.println(clusterStatus + ", refusing to continue with operations");
@@ -80,9 +93,37 @@ public class Main {
         System.out.println(" - " + Utils.formatElapsedTime(start, end));
         System.out.println("CLIENT IS CLOSED");
     }
+    public void processFile(String filename) throws Exception {
+        ProcessFile fileProcess=new ProcessFile();
+        fileProcess.indexFromFile(filename);
+    }
     public void download() throws IOException {
 
-        String baseURI="https://clinicaltrials.gov/api/v2/studies?pageSize=1&countTotal=true&query.term=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true";
+     //   String baseURI="https://clinicaltrials.gov/api/v2/studies?pageSize=10&countTotal=true&query.term=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.intr=Gene+Therapy";
+     //  String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(gene+therapy+OR+gene+editing)&query.intr=BIOLOGICAL&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&countTotal=true";
+//       String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&query.intr=(BIOLOGICAL OR GENETIC OR GENE THERAPY OR GENE EDITING)&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.term=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&countTotal=true"
+////               "&postFilter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-15,MAX]D"
+//              ;
+
+//        String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=AREA[ConditionSearch](Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&query.term=AREA[BasicSearch](Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL) OR AREA[protocolSection.descriptionModule.detailedDescription](Gene Therapy, Gene Edit)&query.intr=AREA[InterventionSearch](GENETIC OR BIOLOGICAL OR Gene Therapy OR Gene Editing)" +
+//                "&postFilter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-15,2024-04-23] AND AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true" +
+//                "&countTotal=true";
+        //&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true
+//        String baseURI="https://clinicaltrials.gov/api/v2/studies?query.intr=AREA[InterventionSearch](GENETIC OR BIOLOGICAL OR Gene Therapy OR Gene Editing)" +
+//                "&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true" +
+//                "&query.term=AREA[LastUpdatePostDate]RANGE[2023-01-15,2024-04-23]" +
+//                "&countTotal=true";
+//        String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true&query.intr=Gene+Therapy" +
+//                "&query.term=gene+therapy" +
+//                "&filter.advanced=+AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
+        String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true" ;
+//                "&query.term=AREA[protocolSection.descriptionModule.briefSummary]gene therapy OR AREA[InterventionSearch]gene therapy OR AREA[InterventionSearch]gene transfer OR AREA[InterventionSearch]gene editing" +
+//                " OR AREA[EligibilitySearch]gene therapy OR AREA[EligibilitySearch]gene transfer OR AREA[EligibilitySearch]gene editing OR AREA[ConditionSearch]gene transfer OR AREA[ConditionSearch]gene editing "
+//              +  "&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true"+
+//
+//                "&filter.advanced=+AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
+
+
         String nextPageToken=null;
         do {
             String fetchUri=null;
@@ -93,16 +134,29 @@ public class Main {
             if(nextPageToken!=null){
                fetchUri=baseURI+"&pageToken="+nextPageToken;
             }else fetchUri=baseURI;
-            String responseStr = restClient.get()
-                    .uri(fetchUri)
-                    .retrieve()
-                    .body(String.class);
-            if(responseStr!=null) {
-           //     JSONObject jsonObject = new JSONObject(responseStr);
-           //     nextPageToken =jsonObject.get("nextPageToken")!=null? (String) jsonObject.get("nextPageToken"):null;
+            try {
+                String responseStr = restClient.get()
+                        .uri(fetchUri)
+                        .retrieve()
+                        .body(String.class);
+                if (responseStr != null) {
+                    JSONObject jsonObject = new JSONObject(responseStr);
+                    JSONArray array = (JSONArray) jsonObject.get("studies");
+                    for (Object object : array) {
+                        //    System.out.println(object);
+                        indexer.indexDocuments(object);
+                    }
+                    try {
+                        nextPageToken = jsonObject.get("nextPageToken") != null ? (String) jsonObject.get("nextPageToken") : null;
+                    } catch (Exception e) {
+                        nextPageToken = null;
+                        e.printStackTrace();
+                    }
 
-           //     System.out.println(jsonObject.get("studies"));
-            indexer.indexDocuments(responseStr);
+
+                }
+            }catch (Exception exception){
+                exception.printStackTrace();
             }
         }while(nextPageToken!=null);
     }
@@ -114,11 +168,11 @@ public class Main {
     }
 
 
-    public Indexer getAdmin() {
+    public IndexAdmin getAdmin() {
         return admin;
     }
 
-    public void setAdmin(Indexer admin) {
+    public void setAdmin(IndexAdmin admin) {
         this.admin = admin;
     }
 
