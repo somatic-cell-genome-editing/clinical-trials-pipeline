@@ -47,21 +47,30 @@ public class ProcessFile {
 
         sb.append("{\"studies\":[");
         boolean firstRow=true;
-        for (Row row : sheet) {
+        String sponsor=null;
+     loop:   for (Row row : sheet) {
 
             Iterator<Cell> cellIterator = row.cellIterator();
-            String NCTNumber= String.valueOf(row.getCell(5));;
-            if (row.getRowNum() >2 && !NCTNumber.equals("") ) {
+            String NCTNumber= String.valueOf(row.getCell(5));
+
+            if (row.getRowNum() >2 ) {
+
+                if(NCTNumber.isEmpty()){
+                    sponsor=row.getCell(1).toString();
+                    continue loop;
+                }
                 if(firstRow) {
                     sb.append("{");
                     firstRow=false;
                 }else{
                     sb.append(",{");
                 }
+                sb.append("\"sponsor\":\"").append(sponsor).append("\",");
                 boolean first=true;
-                while (cellIterator.hasNext()) {
+                while (cellIterator.hasNext() && !NCTNumber.isEmpty()) {
                     Cell cell = cellIterator.next();
                     int colIndex = cell.getColumnIndex();
+
                     if (headerRow.getCell(colIndex) != null && !headerRow.getCell(colIndex).toString().isEmpty() ) {
                     String columnHeader = String.valueOf(headerRow.getCell(colIndex)).replaceAll(" ", "").replaceAll(":", "");
                         if (first) {
