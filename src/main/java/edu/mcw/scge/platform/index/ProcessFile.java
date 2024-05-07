@@ -1,10 +1,13 @@
 package edu.mcw.scge.platform.index;
 
 
+import com.google.gson.Gson;
 import edu.mcw.scge.services.es.ESClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 
+import org.apache.poi.ss.usermodel.Comment;
+import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -21,8 +24,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Iterator;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ProcessFile {
     IndexAdmin indexer=new IndexAdmin();
@@ -38,6 +41,7 @@ public class ProcessFile {
         System.out.println("Done!!");
     }
     public void indexFromFile(String file) throws Exception {
+        Gson gson=new Gson();
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
         XSSFSheet sheet=workbook.getSheet("tracker_for_profit");
@@ -59,6 +63,7 @@ public class ProcessFile {
                     sponsor=row.getCell(1).toString();
                     continue loop;
                 }
+
                 if(firstRow) {
                     sb.append("{");
                     firstRow=false;
@@ -67,10 +72,19 @@ public class ProcessFile {
                 }
                 sb.append("\"sponsor\":\"").append(sponsor).append("\",");
                 boolean first=true;
-                while (cellIterator.hasNext() && !NCTNumber.isEmpty()) {
+                StringBuilder notes=new StringBuilder();
+                while (cellIterator.hasNext() && !NCTNumber.equals("")) {
                     Cell cell = cellIterator.next();
                     int colIndex = cell.getColumnIndex();
+                    if(cell.getCellComment()!=null && !cell.getCellComment().toString().isEmpty()){
+                            Comment comment=cell.getCellComment();
+                           String str=comment.getString().toString();
+                           String substr= Arrays.stream(str.substring(str.indexOf("Comment:")+9).split("Reply:")).map(String::trim).collect(Collectors.joining(";"));
+                            notes.append(substr.replaceAll("\\s+", " ")).append(" ");
 
+
+
+                    }
                     if (headerRow.getCell(colIndex) != null && !headerRow.getCell(colIndex).toString().isEmpty() ) {
                     String columnHeader = String.valueOf(headerRow.getCell(colIndex)).replaceAll(" ", "").replaceAll(":", "");
                         if (first) {
@@ -104,6 +118,8 @@ public class ProcessFile {
 
                     }
                 }
+                if(!notes.isEmpty())
+                sb.append(",\"notes\":").append("\"").append(notes).append("\"");
                 sb.append("}");
             }
 
