@@ -7,7 +7,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 
 import org.apache.poi.ss.usermodel.Comment;
-import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -40,11 +39,10 @@ public class ProcessFile {
         }
         System.out.println("Done!!");
     }
-    public void indexFromFile(String file) throws Exception {
-        Gson gson=new Gson();
+    public String parseFile(String file, String sheetName) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
-        XSSFSheet sheet=workbook.getSheet("tracker_for_profit");
+        XSSFSheet sheet=workbook.getSheet(sheetName);
         SimpleDateFormat dateFormat=new SimpleDateFormat("MM/dd/yyy");
         Row headerRow=sheet.getRow(2);
         StringBuilder sb=new StringBuilder();
@@ -126,18 +124,28 @@ public class ProcessFile {
         }
         sb.append("]}");
         System.out.println(sb.toString());
-        JSONObject jsonObject = new JSONObject(sb.toString());
+
+        fs.close();
+        return sb.toString();
+
+    }
+    public void index(String sb) throws IOException {
+        ;
+        JSONObject jsonObject = new JSONObject(sb);
         JSONArray array = (JSONArray) jsonObject.get("studies");
         System.out.println("ARRAY SIZE:"+ array.length());
         for (Object object : array) {
 //            indexer.indexDocuments(object);
-         IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(object.toString(), XContentType.JSON);
+            IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(object.toString(), XContentType.JSON);
             ESClient.getClient().index(request, RequestOptions.DEFAULT);
         }
 
         RefreshRequest refreshRequest = new RefreshRequest();
         ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
-        fs.close();
-
+    }
+    public void indexFromFile(String file) throws Exception {
+       String json= parseFile(file, "tracker_for_profit");
+        index(json);
+        System.out.println("DONE!!");
     }
 }
