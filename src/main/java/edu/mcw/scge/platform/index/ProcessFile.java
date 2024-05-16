@@ -1,11 +1,11 @@
 package edu.mcw.scge.platform.index;
 
 
-import com.google.gson.Gson;
 import edu.mcw.scge.services.es.ESClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -93,11 +93,11 @@ public class ProcessFile {
 
                         }
 
-                        if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+                        if (cell.getCellType() == CellType.NUMERIC) {
 
                             sb.append("\"").append(dateFormat.format(new Date(String.valueOf(cell.getDateCellValue())))).append("\"");
 
-                        } else if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                        } else if (cell.getCellType() == CellType.FORMULA) {
                             if (colIndex == 13) {
                                 sb.append("\"").append((int) (cell.getNumericCellValue() * 100)).append("%").append("\"");
 
