@@ -1,7 +1,7 @@
 package edu.mcw.scge.platform.index;
 
 
-import edu.mcw.scge.services.es.ESClient;
+import edu.mcw.scge.platform.services.ESClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 
@@ -43,6 +43,9 @@ public class ProcessFile {
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
         XSSFSheet sheet=workbook.getSheet(sheetName);
+        if(sheet==null){
+            return null;
+        }
         SimpleDateFormat dateFormat=new SimpleDateFormat("MM/dd/yyy");
         Row headerRow=sheet.getRow(2);
         StringBuilder sb=new StringBuilder();
@@ -52,12 +55,13 @@ public class ProcessFile {
         String sponsor=null;
      loop:   for (Row row : sheet) {
 
-            Iterator<Cell> cellIterator = row.cellIterator();
+
             String NCTNumber= String.valueOf(row.getCell(5));
 
             if (row.getRowNum() >2 ) {
 
-                if(NCTNumber.isEmpty()){
+                if( NCTNumber==null || NCTNumber.trim().isEmpty() || NCTNumber.equals("null")){
+                    if(row.getCell(1)!=null)
                     sponsor=row.getCell(1).toString();
                     continue loop;
                 }
@@ -69,8 +73,11 @@ public class ProcessFile {
                     sb.append(",{");
                 }
                 sb.append("\"sponsor\":\"").append(sponsor).append("\",");
+                sb.append("\"trackerType\":").append("\"").append(sheetName).append("\",");
+
                 boolean first=true;
                 StringBuilder notes=new StringBuilder();
+                Iterator<Cell> cellIterator = row.cellIterator();
                 while (cellIterator.hasNext() && !NCTNumber.equals("")) {
                     Cell cell = cellIterator.next();
                     int colIndex = cell.getColumnIndex();
@@ -98,7 +105,7 @@ public class ProcessFile {
                             sb.append("\"").append(dateFormat.format(new Date(String.valueOf(cell.getDateCellValue())))).append("\"");
 
                         } else if (cell.getCellType() == CellType.FORMULA) {
-                            if (colIndex == 13) {
+                            if (colIndex == 14) {
                                 sb.append("\"").append((int) (cell.getNumericCellValue() * 100)).append("%").append("\"");
 
                             } else {
@@ -144,8 +151,12 @@ public class ProcessFile {
         ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
     }
     public void indexFromFile(String file) throws Exception {
-       String json= parseFile(file, "tracker_for_profit");
-        index(json);
+       String jsonForProfit= parseFile(file, "GTs tracker-for profit sector");
+        index(jsonForProfit);
+        String jsonForNonProfit= parseFile(file, "GT tracker-Non-profit sector");
+        index(jsonForNonProfit);
+        String jsonCarTs= parseFile(file, "GT tracker-Non-profit sector");
+        index(jsonCarTs);
         System.out.println("DONE!!");
     }
 }
