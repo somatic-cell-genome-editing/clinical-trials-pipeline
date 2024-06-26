@@ -3,8 +3,9 @@ package edu.mcw.scge.platform;
 import edu.mcw.scge.platform.index.Index;
 import edu.mcw.scge.platform.index.IndexAdmin;
 import edu.mcw.scge.platform.index.ProcessFile;
-import edu.mcw.scge.process.Utils;
-import edu.mcw.scge.services.es.ESClient;
+import edu.mcw.scge.platform.process.Utils;
+import edu.mcw.scge.platform.services.ESClient;
+
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
