@@ -1,6 +1,7 @@
 
 package edu.mcw.scge.platform.model;
 
+import java.sql.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.annotation.processing.Generated;

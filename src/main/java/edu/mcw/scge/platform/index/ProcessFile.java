@@ -1,7 +1,8 @@
 package edu.mcw.scge.platform.index;
 
 
-import edu.mcw.scge.platform.services.ESClient;
+import edu.mcw.scge.datamodel.ClinicalTrialRecord;
+import edu.mcw.scge.services.ESClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 
@@ -47,7 +48,7 @@ public class ProcessFile {
             return null;
         }
         SimpleDateFormat dateFormat=new SimpleDateFormat("MM/dd/yyy");
-        Row headerRow=sheet.getRow(2);
+        Row headerRow=sheet.getRow(4);
         StringBuilder sb=new StringBuilder();
 
         sb.append("{\"studies\":[");
@@ -55,14 +56,11 @@ public class ProcessFile {
         String sponsor=null;
      loop:   for (Row row : sheet) {
 
-
-            String NCTNumber= String.valueOf(row.getCell(5));
-
-            if (row.getRowNum() >2 ) {
-
+            if (row.getRowNum() >4 ) {
+                String NCTNumber= String.valueOf(row.getCell(0));
                 if( NCTNumber==null || NCTNumber.trim().isEmpty() || NCTNumber.equals("null")){
-                    if(row.getCell(1)!=null)
-                    sponsor=row.getCell(1).toString();
+                    if(row.getCell(2)!=null)
+                    sponsor=row.getCell(2).toString();
                     continue loop;
                 }
 
@@ -72,7 +70,7 @@ public class ProcessFile {
                 }else{
                     sb.append(",{");
                 }
-                sb.append("\"sponsor\":\"").append(sponsor).append("\",");
+             //   sb.append("\"sponsor\":\"").append(sponsor).append("\",");
                 sb.append("\"trackerType\":").append("\"").append(sheetName).append("\",");
 
                 boolean first=true;
@@ -99,7 +97,7 @@ public class ProcessFile {
                             sb.append(",").append("\"").append(StringUtils.uncapitalize(columnHeader)).append("\":");
 
                         }
-
+                        System.out.println("COLUMN HEADER:"+columnHeader +"\tCELLTYPE:"+cell.getCellType());
                         if (cell.getCellType() == CellType.NUMERIC) {
 
                             sb.append("\"").append(dateFormat.format(new Date(String.valueOf(cell.getDateCellValue())))).append("\"");
@@ -130,17 +128,40 @@ public class ProcessFile {
 
         }
         sb.append("]}");
-        System.out.println(sb.toString());
+     //   System.out.println(sb.toString());
 
         fs.close();
         return sb.toString();
 
     }
+    public List<String>  parseFileForNCTIds(String file) throws Exception {
+        FileInputStream fs=new FileInputStream(new File(file));
+
+        XSSFWorkbook workbook=new XSSFWorkbook(fs);
+        XSSFSheet sheet=workbook.getSheet("all data");
+        if(sheet==null){
+            return null;
+        }
+        List<String> nctIds=new ArrayList<>();
+        int i=0;
+        for (Row row : sheet) {
+            if (row.getRowNum() > 4){
+
+                String NCTNumber = String.valueOf(row.getCell(0));
+            System.out.println(i+". NCTNumber:" + NCTNumber);
+            nctIds.add(NCTNumber);
+            i++;
+        }
+
+        }
+
+        fs.close();
+     return nctIds;
+    }
     public void index(String sb) throws IOException {
         ;
         JSONObject jsonObject = new JSONObject(sb);
         JSONArray array = (JSONArray) jsonObject.get("studies");
-        System.out.println("ARRAY SIZE:"+ array.length());
         for (Object object : array) {
 //            indexer.indexDocuments(object);
             IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(object.toString(), XContentType.JSON);
@@ -150,13 +171,26 @@ public class ProcessFile {
         RefreshRequest refreshRequest = new RefreshRequest();
         ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
     }
+    public void indexClinicalTrailRecord(ClinicalTrialRecord record) throws IOException {
+
+        JSONObject jsonObject = new JSONObject(record);
+        System.out.println("JSONL"+jsonObject.toString());
+            IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
+            ESClient.getClient().index(request, RequestOptions.DEFAULT);
+
+
+        RefreshRequest refreshRequest = new RefreshRequest();
+        ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
+    }
     public void indexFromFile(String file) throws Exception {
-       String jsonForProfit= parseFile(file, "GTs tracker-for profit sector");
-        index(jsonForProfit);
-        String jsonForNonProfit= parseFile(file, "GT tracker-Non-profit sector");
-        index(jsonForNonProfit);
-        String jsonCarTs= parseFile(file, "GT tracker-Non-profit sector");
-        index(jsonCarTs);
+//       String jsonForProfit= parseFile(file, "GTs tracker-for profit sector");
+//        index(jsonForProfit);
+//        String jsonForNonProfit= parseFile(file, "GT tracker-Non-profit sector");
+//        index(jsonForNonProfit);
+//        String jsonCarTs= parseFile(file, "GT tracker-Non-profit sector");
+//        index(jsonCarTs);
+        String allData= parseFile(file, "all data");
+        index(allData);
         System.out.println("DONE!!");
     }
 }

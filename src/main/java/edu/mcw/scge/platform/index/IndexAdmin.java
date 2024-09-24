@@ -3,7 +3,7 @@ package edu.mcw.scge.platform.index;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import edu.mcw.scge.platform.services.ESClient;
+import edu.mcw.scge.services.ESClient;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
