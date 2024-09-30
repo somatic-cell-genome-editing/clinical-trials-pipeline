@@ -1,6 +1,11 @@
 package edu.mcw.scge.platform.index;
 
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
 import edu.mcw.scge.services.ESClient;
 import org.apache.commons.lang.StringUtils;
@@ -15,6 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.common.recycler.Recycler;
 import org.elasticsearch.xcontent.XContentType;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -29,6 +35,7 @@ import java.util.stream.Collectors;
 
 public class ProcessFile {
     IndexAdmin indexer=new IndexAdmin();
+    ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     public static void main(String[] args) throws Exception {
 
         ProcessFile process=new ProcessFile();
@@ -50,7 +57,8 @@ public class ProcessFile {
         SimpleDateFormat dateFormat=new SimpleDateFormat("MM/dd/yyy");
         Row headerRow=sheet.getRow(4);
         StringBuilder sb=new StringBuilder();
-
+        ObjectMapper mapper=JsonMapper.builder().
+                enable( JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER).build();
         sb.append("{\"studies\":[");
         boolean firstRow=true;
         String sponsor=null;
@@ -84,9 +92,6 @@ public class ProcessFile {
                            String str=comment.getString().toString();
                            String substr= Arrays.stream(str.substring(str.indexOf("Comment:")+9).split("Reply:")).map(String::trim).collect(Collectors.joining(";"));
                             notes.append(substr.replaceAll("\\s+", " ")).append(" ");
-
-
-
                     }
                     if (headerRow.getCell(colIndex) != null && !headerRow.getCell(colIndex).toString().isEmpty() ) {
                     String columnHeader = String.valueOf(headerRow.getCell(colIndex)).replaceAll(" ", "").replaceAll(":", "");
@@ -97,10 +102,11 @@ public class ProcessFile {
                             sb.append(",").append("\"").append(StringUtils.uncapitalize(columnHeader)).append("\":");
 
                         }
-                        System.out.println("COLUMN HEADER:"+columnHeader +"\tCELLTYPE:"+cell.getCellType());
+                    //    System.out.println("COLUMN HEADER:"+columnHeader +"\tCELLTYPE:"+cell.getCellType() +"\tCOLUMN INDEX:"+colIndex);
                         if (cell.getCellType() == CellType.NUMERIC) {
-
+                            if(colIndex==22 || colIndex==23 || colIndex==24)
                             sb.append("\"").append(dateFormat.format(new Date(String.valueOf(cell.getDateCellValue())))).append("\"");
+                            else  sb.append("\"").append((int) (cell.getNumericCellValue())).append("\"");
 
                         } else if (cell.getCellType() == CellType.FORMULA) {
                             if (colIndex == 14) {
@@ -123,16 +129,29 @@ public class ProcessFile {
                 }
                 if(!notes.isEmpty())
                 sb.append(",\"notes\":").append("\"").append(notes).append("\"");
+                String interventionDescription=getInterventionDescription(NCTNumber);
+                if(interventionDescription!=null && !interventionDescription.equals("")) {
+
+                    String intervention=mapper.writeValueAsString(interventionDescription);
+                    sb.append(",\"interventionDescription\":").append(intervention);
+                }
                 sb.append("}");
             }
 
         }
         sb.append("]}");
-     //   System.out.println(sb.toString());
-
+     //
+        System.out.println(sb.toString());
         fs.close();
         return sb.toString();
 
+    }
+    public String getInterventionDescription(String nctId) throws Exception {
+      List<ClinicalTrialRecord> records=  clinicalTrailDAO.getClinicalTrailRecordByNctId(nctId);
+      if(records!=null && records.size()>0){
+          return records.get(0).getInterventionDescription();
+      }
+        return null;
     }
     public List<String>  parseFileForNCTIds(String file) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
@@ -159,11 +178,11 @@ public class ProcessFile {
      return nctIds;
     }
     public void index(String sb) throws IOException {
-        ;
+
         JSONObject jsonObject = new JSONObject(sb);
         JSONArray array = (JSONArray) jsonObject.get("studies");
         for (Object object : array) {
-//            indexer.indexDocuments(object);
+        //    indexer.indexDocuments(object);
             IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(object.toString(), XContentType.JSON);
             ESClient.getClient().index(request, RequestOptions.DEFAULT);
         }

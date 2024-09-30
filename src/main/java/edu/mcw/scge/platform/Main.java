@@ -48,7 +48,9 @@ public class Main {
         manager.command=args[0];
         manager.env=args[1];
         manager.source=args[2];
-        String index="scge_platform_search";
+
+     //   String index="scge_platform_search";
+        String index="scge_platform_ctapi_search";
         List<String> indices= new ArrayList<>();
     //    ESClient es= (ESClient) bf.getBean("client");
         if (environments.contains(manager.env)) {
@@ -78,22 +80,17 @@ public class Main {
         long start = System.currentTimeMillis();
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
-        switch (source){
-            case  "api":
-                download();
-                break;
-            case "file":
+        switch (source) {
+            case "api" -> download();
+            case "file" ->
                 /* read all records from excel sheet and directly index into the ES*/
-              //  processFile("data/GT_tracker_050124.xlsx");
-                processFile("data/GT_tracker_with_sources.xlsx");
-                break;
-            case "file2":
-                /*read NCTIDS and make clinical trails API call and load to database*/
-                processFile2("data/GT_tracker_with_sources.xlsx");
-
-                break;
-            default:
-
+                //  processFile("data/GT_tracker_050124.xlsx");
+                    processFile("data/GT_tracker_with_sources.xlsx");
+            case "file2" ->
+                /*read NCTIDS from excel sheet and call clinical trails API and load to database*/
+                    processFile2("data/GT_tracker_with_sources.xlsx");
+            default -> {
+            }
         }
 
         String clusterStatus = this.getClusterHealth(Index.getNewAlias());
