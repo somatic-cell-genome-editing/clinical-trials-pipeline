@@ -346,11 +346,18 @@ public class ProcessFile {
     public void indexClinicalTrials() throws Exception {
         List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
         for(ClinicalTrialRecord trial:trials){
+            if(!trial.getStatus().equals("")) trial.setStatus(formatFieldVal(trial.getStatus()));
+            if(!trial.getSponsorClass().equals("")) trial.setSponsorClass(formatFieldVal(trial.getSponsorClass()));
+            if(!trial.getPhases().equals("")) trial.setPhases(formatFieldVal(trial.getPhases()));
+            if(!trial.getStandardAges().equals("")) trial.setStandardAges(formatFieldVal(trial.getStandardAges()));
           List<ClinicalTrialExternalLink> externalLinks=  clinicalTrailDAO.getExtLinksByNctId(trial.getNctId());
           if(externalLinks!=null && externalLinks.size()>0)
               trial.setExternalLinks(externalLinks);
           indexClinicalTrailRecord(trial);
         }
+    }
+    public String formatFieldVal(String fieldVal){
+        return  Arrays.stream(fieldVal.split(",")).map(str->StringUtils.capitalize(str.toLowerCase().replaceAll("_", " "))).collect(Collectors.joining(", "));
     }
     public void indexClinicalTrailRecord(ClinicalTrialRecord record) throws IOException {
 
