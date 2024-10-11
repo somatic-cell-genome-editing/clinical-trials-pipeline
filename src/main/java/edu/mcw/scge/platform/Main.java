@@ -87,11 +87,13 @@ public class Main {
                     processFile("data/GT_tracker_with_sources.xlsx");
             case "file1" -> {
                 /*read NCTIDS from Excel sheet */
-              List<String> nctIds= parseNCTIds("data/GT_tracker_with_sources.xlsx");
-              /*Query clinical trials API and load API results to database*/
+                List<String> nctIds= parseNCTIds("data/GT_tracker_with_sources.xlsx");
+                /* Query clinical trials API and load API results to database*/
                 queryApiNUploadToDB(nctIds);
-                /* read from Excel sheet and upload curated field to DB and index */
+                /* read from Excel sheet and upload curated fields to DB  */
                 processFile1("data/GT_tracker_with_sources.xlsx");
+                /*index clinical trials*/
+                fileProcess.indexClinicalTrials();
             }
                default -> {
             }
@@ -116,7 +118,7 @@ public class Main {
     }
     public void processFile1(String filename) throws Exception {
         ProcessFile fileProcess=new ProcessFile();
-        fileProcess.uploadNIndexFromFile(filename);
+        fileProcess.parseFileNLoadToDB(filename);
     }
     public List<String> parseNCTIds(String filename) throws Exception {
         return fileProcess.parseFileForNCTIds(filename);

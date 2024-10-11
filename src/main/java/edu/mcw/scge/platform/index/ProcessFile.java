@@ -120,7 +120,7 @@ public class ProcessFile {
                 }catch (Exception e){
                     e.printStackTrace();
                 }
-              //  uploadXLinks(sb.toString());
+                uploadXLinks(sb.toString());
 
             }
 
@@ -130,118 +130,70 @@ public class ProcessFile {
     }
     public void uploadXLinks(String sb) throws Exception {
         JSONObject object=new JSONObject(sb);
-        System.out.println("SB:"+sb);
         try {
             for (String o : object.get("grants").toString().split(";")) {
                 if(o!=null && !o.trim().equals("")) {
-                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
-                    xLink.setName(o.trim());
-                    xLink.setType("grant");
-                    xLink.setNctId(object.get("nCTNumber").toString());
-                    if (o.contains("https") || o.contains("http")) {
-                        xLink.setLink(o);
-                    }
-                    if (o.toLowerCase().contains("pmid")) {
-                        String pmid = o.substring(o.indexOf(":") + 1).trim();
-                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
-                    }
-
-                    clinicalTrailDAO.insertExternalLink(xLink);
+                    insertLink( o,  "grant",  object.get("nCTNumber").toString());
                 }
             }
         }catch (Exception e){}
         try {
             for (String o : object.get("protocols").toString().split(";")) {
                 if(o!=null  && !o.trim().equals("")) {
-                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
-                    xLink.setName(o.trim());
-                    xLink.setType("protocol");
-                    xLink.setNctId(object.get("nCTNumber").toString());
-                    if (o.contains("https") || o.contains("http")) {
-                        xLink.setLink(o);
-                    }
-                    if (o.toLowerCase().contains("pmid")) {
-                        String pmid = o.substring(o.indexOf(":") + 1).trim();
-                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
-                    }
-                    clinicalTrailDAO.insertExternalLink(xLink);
+                    insertLink( o,  "protocol",  object.get("nCTNumber").toString());
                 }
             }
         }catch (Exception e){}
         try {
             for (String o : object.get("clinicalPublications").toString().split(";")) {
                 if(o!=null  && !o.trim().equals("")) {
-                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
-                    xLink.setName(o.trim());
-                    xLink.setType("clinicalPublications");
-                    xLink.setNctId(object.get("nCTNumber").toString());
-                    if (o.contains("https") || o.contains("http")) {
-                        xLink.setLink(o);
-                    }
-                    if (o.toLowerCase().contains("pmid")) {
-                        String pmid = o.substring(o.indexOf(":") + 1).trim();
-                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
-                    }
-                    clinicalTrailDAO.insertExternalLink(xLink);
+                    insertLink( o,  "Clinical Publications",  object.get("nCTNumber").toString());
                 }
             }
         }catch (Exception e){}
         try {
             for (String o : object.get("preclinicalPublications").toString().split(";")) {
                 if(o!=null  && !o.trim().equals("")) {
-                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
-                    xLink.setName(o.trim());
-                    xLink.setType("preclinicalPublications");
-                    xLink.setNctId(object.get("nCTNumber").toString());
-                    if (o.contains("https") || o.contains("http")) {
-                        xLink.setLink(o);
-                    }
-                    if (o.toLowerCase().contains("pmid")) {
-                        String pmid = o.substring(o.indexOf(":") + 1).trim();
-                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
-                    }
-                    clinicalTrailDAO.insertExternalLink(xLink);
+                    insertLink( o,  "Preclinical Publications",  object.get("nCTNumber").toString());
+
                 }
             }
         }catch (Exception e){}
         try {
             for (String o : object.get("newsandPressReleases").toString().split(";")) {
                 if(o!=null  && !o.trim().equals("")) {
-                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
-                    xLink.setName(o.trim());
-                    xLink.setType("newsandPressReleases");
-                    xLink.setNctId(object.get("nCTNumber").toString());
-                    if (o.contains("https") || o.contains("http")) {
-                        xLink.setLink(o);
-                    }
-                    if (o.toLowerCase().contains("pmid")) {
-                        String pmid = o.substring(o.indexOf(":") + 1).trim();
-                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
-                    }
-                    clinicalTrailDAO.insertExternalLink(xLink);
+                    insertLink( o,  "News and Press Releases",  object.get("nCTNumber").toString());
                 }
             }
         }catch (Exception e){}
         try {
             for (String o : object.get("sponsorTrialWebsiteLink").toString().split(";")) {
                 if(o!=null  && !o.trim().equals("")) {
-                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
-                    xLink.setName(o.trim());
-                    xLink.setType("sponsorTrialWebsiteLink");
-                    xLink.setNctId(object.get("nCTNumber").toString());
-                    if (o.contains("https") || o.contains("http")) {
-                        xLink.setLink(o);
-                    }
-                    if (o.toLowerCase().contains("pmid")) {
-                        String pmid = o.substring(o.indexOf(":") + 1).trim();
-                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
-                    }
-                    clinicalTrailDAO.insertExternalLink(xLink);
+                    insertLink( o,  "Sponsor Trial Website Link",  object.get("nCTNumber").toString());
                 }
             }
 
         }catch (Exception e){}
 
+    }
+    public void insertLink(String o, String type, String nctNumber) throws Exception {
+        ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
+        xLink.setName(o.trim());
+        xLink.setType(type);
+        xLink.setNctId(nctNumber);
+        if (o.contains("https") || o.contains("http")) {
+            xLink.setLink(o);
+        }
+        if (o.toLowerCase().contains("pmid")) {
+            String pmid = o.substring(o.indexOf(":") + 1).trim();
+            xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
+        }
+
+        if(!clinicalTrailDAO.existsExternalLink(xLink)) {
+            int id=clinicalTrailDAO.getNextKey("clinical_trial_ext_links_seq");
+            xLink.setId(id);
+            clinicalTrailDAO.insertExternalLink(xLink);
+        }
     }
     public String parseFile(String file, String sheetName) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
@@ -361,10 +313,8 @@ public class ProcessFile {
         int i=0;
         for (Row row : sheet) {
             if (row.getRowNum() > 4){
-
                 String NCTNumber = String.valueOf(row.getCell(0));
-            System.out.println(i+". NCTNumber:" + NCTNumber);
-            nctIds.add(NCTNumber);
+                nctIds.add(NCTNumber);
             i++;
         }
 
@@ -389,12 +339,9 @@ public class ProcessFile {
     public void indexFromFile(String file) throws Exception {
         String allData= parseFile(file, "all data");
          index(allData);
-        System.out.println("DONE!!");
     }
-    public void uploadNIndexFromFile(String file) throws Exception {
+    public void parseFileNLoadToDB(String file) throws Exception {
         parseFileAndMapDB(file, "all data");
-        indexClinicalTrials();
-        System.out.println("DONE!!");
     }
     public void indexClinicalTrials() throws Exception {
         List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
