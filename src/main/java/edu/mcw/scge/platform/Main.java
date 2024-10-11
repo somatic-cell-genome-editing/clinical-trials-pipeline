@@ -25,8 +25,7 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
-import java.net.URI;
-import java.sql.Date;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,7 +51,6 @@ public class Main {
      //   String index="scge_platform_search";
         String index="scge_platform_ctapi_search";
         List<String> indices= new ArrayList<>();
-    //    ESClient es= (ESClient) bf.getBean("client");
         if (environments.contains(manager.env)) {
             manager.index.setIndex( index +"_"+manager.env);
             indices.add(index+"_"+manager.env + "1");
@@ -60,11 +58,11 @@ public class Main {
            manager.index.setIndices(indices);
         }
         manager.index= (Index) bf.getBean("index");
+
         try {
             manager.run();
         } catch (Exception e) {
-
-                try {
+            try {
                     ESClient.destroy();
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -81,15 +79,21 @@ public class Main {
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
         switch (source) {
-            case "api" -> download();
+            case "api" ->
+                /* download all data from clinical trails API and load to database. */
+                    download();
             case "file" ->
-                /* read all records from excel sheet and directly index into the ES*/
-                //  processFile("data/GT_tracker_050124.xlsx");
+                /* read from Excel sheet and directly index json string into the ES*/
                     processFile("data/GT_tracker_with_sources.xlsx");
-            case "file2" ->
-                /*read NCTIDS from excel sheet and call clinical trails API and load to database*/
-                    processFile2("data/GT_tracker_with_sources.xlsx");
-            default -> {
+            case "file1" -> {
+                /*read NCTIDS from Excel sheet */
+              List<String> nctIds= parseNCTIds("data/GT_tracker_with_sources.xlsx");
+              /*Query clinical trials API and load API results to database*/
+                queryApiNUploadToDB(nctIds);
+                /* read from Excel sheet and upload curated field to DB and index */
+                processFile1("data/GT_tracker_with_sources.xlsx");
+            }
+               default -> {
             }
         }
 
@@ -110,12 +114,19 @@ public class Main {
         ProcessFile fileProcess=new ProcessFile();
         fileProcess.indexFromFile(filename);
     }
-    public void processFile2(String filename) throws Exception {
+    public void processFile1(String filename) throws Exception {
+        ProcessFile fileProcess=new ProcessFile();
+        fileProcess.uploadNIndexFromFile(filename);
+    }
+    public List<String> parseNCTIds(String filename) throws Exception {
+        return fileProcess.parseFileForNCTIds(filename);
+    }
+    public void queryApiNUploadToDB(List<String> nctIds) throws Exception {
 
-        List<String> nctIds=fileProcess.parseFileForNCTIds(filename);
-        uploadClinicalTrails(nctIds);
-        indexClinicalTrails();
-
+      //  List<String> nctIds=fileProcess.parseFileForNCTIds(filename);
+       // uploadClinicalTrails(nctIds);
+        clinicalTrailDAO.downloadClinicalTrails(nctIds);
+     //   fileProcess.indexClinicalTrials();
         System.out.println("DONE!!");
     }
 
@@ -253,14 +264,14 @@ public class Main {
             }
         }
     }
-    public void indexClinicalTrails() throws Exception {
-        List<ClinicalTrialRecord> records=clinicalTrailDAO.getAllClinicalTrailRecords();
-        if(records.size()>0){
-            for(ClinicalTrialRecord record:records){
-                fileProcess.indexClinicalTrailRecord(record);
-            };
-        }
-    }
+//    public void indexClinicalTrails() throws Exception {
+//        List<ClinicalTrialCuratedData> records=clinicalTrailDAO.getAllClinicalTrailRecords();
+//        if(records.size()>0){
+//            for(ClinicalTrialRecord record:records){
+//                fileProcess.indexClinicalTrailRecord(record);
+//            };
+//        }
+//    }
     public void download() throws IOException {
 
      //   String baseURI="https://clinicaltrials.gov/api/v2/studies?pageSize=10&countTotal=true&query.term=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.intr=Gene+Therapy";

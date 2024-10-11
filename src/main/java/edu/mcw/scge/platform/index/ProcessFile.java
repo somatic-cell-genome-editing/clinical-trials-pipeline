@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.gson.Gson;
 import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
-import edu.mcw.scge.datamodel.ClinicalTrialCuratedData;
+import edu.mcw.scge.datamodel.ClinicalTrialExternalLink;
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
 import edu.mcw.scge.services.ESClient;
 import org.apache.commons.lang.StringUtils;
@@ -23,7 +23,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.common.recycler.Recycler;
 import org.elasticsearch.xcontent.XContentType;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -37,26 +36,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ProcessFile {
-    IndexAdmin indexer=new IndexAdmin();
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
-    Gson gson=new Gson();
-    public static void main(String[] args) throws Exception {
 
-        ProcessFile process=new ProcessFile();
-        try {
-
-            process.indexFromFile("data/GT_tracker_050124.xlsx");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.println("Done!!");
-    }
-    public String parseFileAndMapDB(String file, String sheetName) throws Exception {
+    public void parseFileAndMapDB(String file, String sheetName) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
         XSSFSheet sheet=workbook.getSheet(sheetName);
         if(sheet==null){
-            return null;
+           throw new Exception("Sheet is null");
         }
         SimpleDateFormat dateFormat=new SimpleDateFormat("MM/dd/yyy");
         Row headerRow=sheet.getRow(4);
@@ -64,15 +51,12 @@ public class ProcessFile {
         ObjectMapper mapper=JsonMapper.builder().
                 enable( JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER).build();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
-        boolean firstRow=true;
-        String sponsor=null;
+
      loop:   for (Row row : sheet) {
 
             if (row.getRowNum() >4 ) {
                 String NCTNumber= String.valueOf(row.getCell(0));
                 if( NCTNumber==null || NCTNumber.trim().isEmpty() || NCTNumber.equals("null")){
-                    if(row.getCell(2)!=null)
-                    sponsor=row.getCell(2).toString();
                     continue loop;
                 }
 
@@ -129,19 +113,134 @@ public class ProcessFile {
                 if(!notes.isEmpty())
                 sb.append(",\"notes\":").append("\"").append(notes).append("\"");
                 sb.append("}");
-               // System.out.println("SB:"+sb.toString());
-                ClinicalTrialCuratedData rec=mapper.readValue(sb.toString(), ClinicalTrialCuratedData.class);
-                clinicalTrailDAO.insertClinicalTrailCuratedData(rec);
-                System.out.println("REC ID:"+ gson.toJson(rec));
+                ClinicalTrialRecord rec=mapper.readValue(sb.toString(), ClinicalTrialRecord.class);
+                try {
+                  //  clinicalTrailDAO.insert(rec);
+                    clinicalTrailDAO.updateCuratedDataFields(rec);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+              //  uploadXLinks(sb.toString());
 
             }
 
         }
 
-     //
-
         fs.close();
-        return null;
+    }
+    public void uploadXLinks(String sb) throws Exception {
+        JSONObject object=new JSONObject(sb);
+        System.out.println("SB:"+sb);
+        try {
+            for (String o : object.get("grants").toString().split(";")) {
+                if(o!=null && !o.trim().equals("")) {
+                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
+                    xLink.setName(o.trim());
+                    xLink.setType("grant");
+                    xLink.setNctId(object.get("nCTNumber").toString());
+                    if (o.contains("https") || o.contains("http")) {
+                        xLink.setLink(o);
+                    }
+                    if (o.toLowerCase().contains("pmid")) {
+                        String pmid = o.substring(o.indexOf(":") + 1).trim();
+                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
+                    }
+
+                    clinicalTrailDAO.insertExternalLink(xLink);
+                }
+            }
+        }catch (Exception e){}
+        try {
+            for (String o : object.get("protocols").toString().split(";")) {
+                if(o!=null  && !o.trim().equals("")) {
+                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
+                    xLink.setName(o.trim());
+                    xLink.setType("protocol");
+                    xLink.setNctId(object.get("nCTNumber").toString());
+                    if (o.contains("https") || o.contains("http")) {
+                        xLink.setLink(o);
+                    }
+                    if (o.toLowerCase().contains("pmid")) {
+                        String pmid = o.substring(o.indexOf(":") + 1).trim();
+                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
+                    }
+                    clinicalTrailDAO.insertExternalLink(xLink);
+                }
+            }
+        }catch (Exception e){}
+        try {
+            for (String o : object.get("clinicalPublications").toString().split(";")) {
+                if(o!=null  && !o.trim().equals("")) {
+                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
+                    xLink.setName(o.trim());
+                    xLink.setType("clinicalPublications");
+                    xLink.setNctId(object.get("nCTNumber").toString());
+                    if (o.contains("https") || o.contains("http")) {
+                        xLink.setLink(o);
+                    }
+                    if (o.toLowerCase().contains("pmid")) {
+                        String pmid = o.substring(o.indexOf(":") + 1).trim();
+                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
+                    }
+                    clinicalTrailDAO.insertExternalLink(xLink);
+                }
+            }
+        }catch (Exception e){}
+        try {
+            for (String o : object.get("preclinicalPublications").toString().split(";")) {
+                if(o!=null  && !o.trim().equals("")) {
+                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
+                    xLink.setName(o.trim());
+                    xLink.setType("preclinicalPublications");
+                    xLink.setNctId(object.get("nCTNumber").toString());
+                    if (o.contains("https") || o.contains("http")) {
+                        xLink.setLink(o);
+                    }
+                    if (o.toLowerCase().contains("pmid")) {
+                        String pmid = o.substring(o.indexOf(":") + 1).trim();
+                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
+                    }
+                    clinicalTrailDAO.insertExternalLink(xLink);
+                }
+            }
+        }catch (Exception e){}
+        try {
+            for (String o : object.get("newsandPressReleases").toString().split(";")) {
+                if(o!=null  && !o.trim().equals("")) {
+                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
+                    xLink.setName(o.trim());
+                    xLink.setType("newsandPressReleases");
+                    xLink.setNctId(object.get("nCTNumber").toString());
+                    if (o.contains("https") || o.contains("http")) {
+                        xLink.setLink(o);
+                    }
+                    if (o.toLowerCase().contains("pmid")) {
+                        String pmid = o.substring(o.indexOf(":") + 1).trim();
+                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
+                    }
+                    clinicalTrailDAO.insertExternalLink(xLink);
+                }
+            }
+        }catch (Exception e){}
+        try {
+            for (String o : object.get("sponsorTrialWebsiteLink").toString().split(";")) {
+                if(o!=null  && !o.trim().equals("")) {
+                    ClinicalTrialExternalLink xLink = new ClinicalTrialExternalLink();
+                    xLink.setName(o.trim());
+                    xLink.setType("sponsorTrialWebsiteLink");
+                    xLink.setNctId(object.get("nCTNumber").toString());
+                    if (o.contains("https") || o.contains("http")) {
+                        xLink.setLink(o);
+                    }
+                    if (o.toLowerCase().contains("pmid")) {
+                        String pmid = o.substring(o.indexOf(":") + 1).trim();
+                        xLink.setLink("https://pubmed.ncbi.nlm.nih.gov/" + pmid);
+                    }
+                    clinicalTrailDAO.insertExternalLink(xLink);
+                }
+            }
+
+        }catch (Exception e){}
 
     }
     public String parseFile(String file, String sheetName) throws Exception {
@@ -244,7 +343,7 @@ public class ProcessFile {
 
     }
     public String getInterventionDescription(String nctId) throws Exception {
-      List<ClinicalTrialCuratedData> records=  clinicalTrailDAO.getClinicalTrailRecordByNctId(nctId);
+      List<ClinicalTrialRecord> records=  clinicalTrailDAO.getClinicalTrailRecordByNctId(nctId);
       if(records!=null && records.size()>0){
           return records.get(0).getInterventionDescription();
       }
@@ -287,27 +386,31 @@ public class ProcessFile {
         RefreshRequest refreshRequest = new RefreshRequest();
         ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
     }
+    public void indexFromFile(String file) throws Exception {
+        String allData= parseFile(file, "all data");
+         index(allData);
+        System.out.println("DONE!!");
+    }
+    public void uploadNIndexFromFile(String file) throws Exception {
+        parseFileAndMapDB(file, "all data");
+        indexClinicalTrials();
+        System.out.println("DONE!!");
+    }
+    public void indexClinicalTrials() throws Exception {
+        List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
+        for(ClinicalTrialRecord trial:trials){
+          List<ClinicalTrialExternalLink> externalLinks=  clinicalTrailDAO.getExtLinksByNctId(trial.getNctId());
+          if(externalLinks!=null && externalLinks.size()>0)
+              trial.setExternalLinks(externalLinks);
+          indexClinicalTrailRecord(trial);
+        }
+    }
     public void indexClinicalTrailRecord(ClinicalTrialRecord record) throws IOException {
 
         JSONObject jsonObject = new JSONObject(record);
-        System.out.println("JSONL"+jsonObject.toString());
-            IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
-            ESClient.getClient().index(request, RequestOptions.DEFAULT);
-
-
+        IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
+        ESClient.getClient().index(request, RequestOptions.DEFAULT);
         RefreshRequest refreshRequest = new RefreshRequest();
         ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
-    }
-    public void indexFromFile(String file) throws Exception {
-//       String jsonForProfit= parseFile(file, "GTs tracker-for profit sector");
-//        index(jsonForProfit);
-//        String jsonForNonProfit= parseFile(file, "GT tracker-Non-profit sector");
-//        index(jsonForNonProfit);
-//        String jsonCarTs= parseFile(file, "GT tracker-Non-profit sector");
-//        index(jsonCarTs);
- //       String allData= parseFile(file, "all data");
-        String allData= parseFileAndMapDB(file, "all data");
-    //    index(allData);
-        System.out.println("DONE!!");
     }
 }
