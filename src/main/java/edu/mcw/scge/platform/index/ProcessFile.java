@@ -2,6 +2,7 @@ package edu.mcw.scge.platform.index;
 
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -133,16 +134,17 @@ public class ProcessFile {
         try {
             for (String o : object.get("grants").toString().split(";")) {
                 if(o!=null && !o.trim().equals("")) {
-                    insertLink( o,  "grant",  object.get("nCTNumber").toString());
+                    insertLink( o,  "Grant",  object.get("nCTNumber").toString());
                 }
             }
         }catch (Exception e){}
         try {
             for (String o : object.get("protocols").toString().split(";")) {
                 if(o!=null  && !o.trim().equals("")) {
-                    insertLink( o,  "protocol",  object.get("nCTNumber").toString());
+                    insertLink( o,  "Protocol",  object.get("nCTNumber").toString());
                 }
             }
+
         }catch (Exception e){}
         try {
             for (String o : object.get("clinicalPublications").toString().split(";")) {
@@ -344,22 +346,107 @@ public class ProcessFile {
         parseFileAndMapDB(file, "all data");
     }
     public void indexClinicalTrials() throws Exception {
+        Gson gson=new Gson();
         List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
+        ObjectMapper mapper=JsonMapper.builder().
+                enable( JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
+                //.enable(JsonParser.Feature.INCLUDE_SOURCE_IN_LOCATION)
+                .build();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+
         for(ClinicalTrialRecord trial:trials){
-            if(!trial.getStatus().equals("")) trial.setStatus(formatFieldVal(trial.getStatus()));
-            if(!trial.getSponsorClass().equals("")) trial.setSponsorClass(formatFieldVal(trial.getSponsorClass()));
-            if(!trial.getPhases().equals("")) trial.setPhases(formatFieldVal(trial.getPhases()));
-            if(!trial.getStandardAges().equals("")) trial.setStandardAges(formatFieldVal(trial.getStandardAges()));
-          List<ClinicalTrialExternalLink> externalLinks=  clinicalTrailDAO.getExtLinksByNctId(trial.getNctId());
-          if(externalLinks!=null && externalLinks.size()>0)
+            formatRecordValue(trial);
+            List<ClinicalTrialExternalLink> externalLinks=  clinicalTrailDAO.getExtLinksByNctId(trial.getNctId());
+            if(externalLinks!=null && externalLinks.size()>0)
               trial.setExternalLinks(externalLinks);
-          indexClinicalTrailRecord(trial);
+            ClinicalTrialIndexObject object=mapper.readValue(gson.toJson(trial), ClinicalTrialIndexObject.class);
+
+          if(trial.getPhase()!=null)
+          object.setPhases(Arrays.stream(trial.getPhase().split(",")).map(String::trim).collect(Collectors.toSet()));
+            if(trial.getStandardAge()!=null)
+          object.setStandardAges(Arrays.stream(trial.getStandardAge().split(",")).map(String::trim).collect(Collectors.toSet()));
+            if(trial.getStudyStatus()!=null)
+          object.setStatus(Arrays.stream(trial.getStudyStatus().split(",")).map(String::trim).collect(Collectors.toSet()));
+            if(trial.getLocation()!=null)
+            object.setLocations(Arrays.stream(trial.getLocation().split(",")).map(String::trim).collect(Collectors.toSet()));
+
+          indexClinicalTrailRecord(object);
         }
     }
-    public String formatFieldVal(String fieldVal){
-        return  Arrays.stream(fieldVal.split(",")).map(str->StringUtils.capitalize(str.toLowerCase().replaceAll("_", " "))).collect(Collectors.joining(", "));
+    public void formatRecordValue(ClinicalTrialRecord record){
+        try {
+            record.setTargetGeneOrVariant(StringUtils.capitalize(record.getTargetGeneOrVariant()));
+        }catch (Exception e){}
+        try {
+            record.setCompoundName(StringUtils.capitalize(record.getCompoundName()));
+        }catch (Exception e){}
+        try {
+            record.setTherapyType(StringUtils.capitalize(record.getTherapyType()));
+        }catch (Exception e){}
+        try {
+            record.setTherapyRoute(StringUtils.capitalize(record.getTherapyRoute()));
+        }catch(Exception e){}
+        try {
+            record.setMechanismOfAction(StringUtils.capitalize(record.getMechanismOfAction()));
+        }catch (Exception e){}
+        try {
+            record.setRouteOfAdministration(StringUtils.capitalize(record.getRouteOfAdministration()));
+        }catch (Exception e){}
+        try {
+            record.setDrugProductType(StringUtils.capitalize(record.getDrugProductType()));
+        }catch (Exception e){}
+        try {
+            record.setTargetTissueOrCell(StringUtils.capitalize(record.getTargetTissueOrCell()));
+        }catch (Exception e){}
+        try {
+            record.setDeliverySystem(StringUtils.capitalize(record.getDeliverySystem()));
+        }catch (Exception e){}
+        try {
+            if(!record.getDose1().equalsIgnoreCase("none"))
+            record.setDose1(StringUtils.capitalize(record.getDose1()));
+            else record.setDose1("");
+        }catch (Exception e){}
+        try {
+            if(!record.getDose2().equalsIgnoreCase("none"))
+            record.setDose2(StringUtils.capitalize(record.getDose2()));
+            else record.setDose2("");
+        }catch (Exception e){}
+        try {
+            if(!record.getDose3().equalsIgnoreCase("none"))
+            record.setDose3(StringUtils.capitalize(record.getDose3()));
+            else record.setDose3("");
+        }catch (Exception e){}
+        try {
+            if(!record.getDose4().equalsIgnoreCase("none"))
+            record.setDose4(StringUtils.capitalize(record.getDose4()));
+            else record.setDose4("");
+        }catch (Exception e){}
+        try {
+            if(!record.getDose5().equalsIgnoreCase("none"))
+            record.setDose5(StringUtils.capitalize(record.getDose5()));
+            else record.setDose5("");
+        }catch (Exception e){}
+
+        try {
+            if(record.getIsFDARegulated()!=null && !record.getIsFDARegulated().equalsIgnoreCase("null"))
+                record.setIsFDARegulated(StringUtils.capitalize(record.getIsFDARegulated()));
+            else record.setIsFDARegulated("");
+        }catch (Exception e){}
+        try {
+            if(record.getRecentUpdates()!=null && !record.getRecentUpdates().equalsIgnoreCase("null"))
+                record.setRecentUpdates(StringUtils.capitalize(record.getRecentUpdates()));
+
+        }catch (Exception e){}
+
+        if(!record.getStudyStatus().equals("")) record.setStudyStatus(formatFieldVal(record.getStudyStatus()));
+        if(!record.getSponsorClass().equals("") && !record.getSponsorClass().equalsIgnoreCase("NIH")) record.setSponsorClass(formatFieldVal(record.getSponsorClass()));
+        if(!record.getPhase().equals("")) record.setPhase(formatFieldVal(record.getPhase()));
+        if(!record.getStandardAge().equals("")) record.setStandardAge(formatFieldVal(record.getStandardAge()));
     }
-    public void indexClinicalTrailRecord(ClinicalTrialRecord record) throws IOException {
+    public String formatFieldVal(String fieldVal){
+        return  Arrays.stream(fieldVal.split(",")).map(str->StringUtils.capitalize(str.toLowerCase().trim().replaceAll("_", " "))).collect(Collectors.joining(", "));
+    }
+    public void indexClinicalTrailRecord(ClinicalTrialIndexObject record) throws IOException {
 
         JSONObject jsonObject = new JSONObject(record);
         IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);

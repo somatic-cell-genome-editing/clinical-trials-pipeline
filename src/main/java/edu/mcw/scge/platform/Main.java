@@ -189,13 +189,13 @@ public class Main {
                             if (conditionKeywords != null && !conditionKeywords.isEmpty())
                                 record.setBrowseConditionTerms(conditionKeywords.stream().collect(Collectors.joining(", ")));
                             //    System.out.println("Phases:"+study.getProtocolSection().getDesignModule().getPhases()+"\tEnrollmentCount:"+study.getProtocolSection().getDesignModule().getEnrollmentInfo().getCount());
-                            record.setPhases(String.join(", ", study.getProtocolSection().getDesignModule().getPhases()));
+                            record.setPhase(String.join(", ", study.getProtocolSection().getDesignModule().getPhases()));
                             record.setEnrorllmentCount(study.getProtocolSection().getDesignModule().getEnrollmentInfo().getCount());
 
                             //   indexer.indexDocuments(object);
                             //   System.out.println("locations:"+ study.getProtocolSection().getContactsLocationsModule().getLocations().size());
                             if (study.getProtocolSection().getContactsLocationsModule() != null) {
-                                record.setLocations(String.join(",", study.getProtocolSection().getContactsLocationsModule().getLocations().stream().map(Location::getCountry).collect(Collectors.toSet())));
+                                record.setLocation(String.join(",", study.getProtocolSection().getContactsLocationsModule().getLocations().stream().map(Location::getCountry).collect(Collectors.toSet())));
                                 record.setNumberOfLocations(study.getProtocolSection().getContactsLocationsModule().getLocations().size());
                             }
 //                        System.out.print("Centers in USA:");
@@ -213,7 +213,7 @@ public class Main {
                             record.setElibilityMinAge(study.getProtocolSection().getEligibilityModule().getMinimumAge());
                             record.setElibilityMaxAge(study.getProtocolSection().getEligibilityModule().getMaximumAge());
                             record.setHealthyVolunteers(study.getProtocolSection().getEligibilityModule().getHealthyVolunteers().toString());
-                            record.setStandardAges(String.join(",", study.getProtocolSection().getEligibilityModule().getStdAges()));
+                            record.setStandardAge(String.join(",", study.getProtocolSection().getEligibilityModule().getStdAges()));
 
 
                             record.setIsFDARegulated(String.valueOf(study.getProtocolSection().getOversightModule().getIsFdaRegulatedDrug()));
@@ -231,7 +231,7 @@ public class Main {
 
                                 record.setNihReportLink(builder.toString());
                             }
-                            record.setStatus(study.getProtocolSection().getStatusModule().getOverallStatus());
+                            record.setStudyStatus(study.getProtocolSection().getStatusModule().getOverallStatus());
                             record.setFirstSubmitDate((study.getProtocolSection().getStatusModule().getStudyFirstSubmitDate()));
                             record.setEstimatedCompleteDate((study.getProtocolSection().getStatusModule().getCompletionDateStruct().getDate()));
                             record.setLastUpdatePostDate((study.getProtocolSection().getStatusModule().getLastUpdatePostDateStruct().getDate()));

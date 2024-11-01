@@ -76,6 +76,7 @@ dependencies {
 
 // https://mvnrepository.com/artifact/org.apache.tika/tika
     implementation group: 'org.apache.tika', name: 'tika', version: '2.9.2', ext: 'pom'
+    implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
 
 
 }
