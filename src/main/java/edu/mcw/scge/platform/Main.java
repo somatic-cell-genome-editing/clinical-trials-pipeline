@@ -11,6 +11,7 @@ import edu.mcw.scge.platform.model.*;
 
 import edu.mcw.scge.process.Utils;
 import edu.mcw.scge.services.ESClient;
+import edu.mcw.scge.services.SCGEContext;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
@@ -48,12 +49,13 @@ public class Main {
         manager.source=args[2];
 
      //   String index="scge_platform_search";
-        String index="scge_platform_search_ct";
+//        String index="scge_platform_search_ct";
+        String index= SCGEContext.getESIndexName();
         List<String> indices= new ArrayList<>();
         if (environments.contains(manager.env)) {
-            manager.index.setIndex( index +"_"+manager.env);
-            indices.add(index+"_"+manager.env + "1");
-            indices.add(index + "_"+manager.env + "2");
+            manager.index.setIndex( index);
+            indices.add(index+ "1");
+           indices.add(index  + "2");
            manager.index.setIndices(indices);
         }
         manager.index= (Index) bf.getBean("index");
@@ -75,7 +77,7 @@ public class Main {
 
     public void run() throws Exception {
         long start = System.currentTimeMillis();
-        String fileName="data/GT_tracker_release.xlsx";
+        String fileName="data/GT_tracker_release1.xlsx";
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
         switch (source) {
