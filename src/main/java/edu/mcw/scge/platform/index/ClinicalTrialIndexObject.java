@@ -12,6 +12,15 @@ public class ClinicalTrialIndexObject extends ClinicalTrialRecord {
     private Set<String> status;
     private Set<String> standardAges;
     private Set<String> locations;
+    private String category;
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
 
     public Set<String> getPhases() {
         return phases;

@@ -22,7 +22,6 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
 
@@ -49,7 +48,7 @@ public class Main {
         manager.source=args[2];
 
      //   String index="scge_platform_search";
-        String index="scge_platform_ctapi_search";
+        String index="scge_platform_search_ct";
         List<String> indices= new ArrayList<>();
         if (environments.contains(manager.env)) {
             manager.index.setIndex( index +"_"+manager.env);
@@ -76,27 +75,28 @@ public class Main {
 
     public void run() throws Exception {
         long start = System.currentTimeMillis();
+        String fileName="data/GT_tracker_release.xlsx";
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
         switch (source) {
-            case "api" ->
+            case "api" :
                 /* download all data from clinical trails API and load to database. */
-                    download();
-            case "file" ->
+                    download();break;
+            case "file" :
                 /* read from Excel sheet and directly index json string into the ES*/
-                    processFile("data/GT_tracker_with_sources.xlsx");
-            case "file1" -> {
+                    processFile(fileName);
+                    break;
+            case "file1" :
                 /*read NCTIDS from Excel sheet */
-                List<String> nctIds= parseNCTIds("data/GT_tracker_with_sources.xlsx");
+                List<String> nctIds= parseNCTIds(fileName);
                 /* Query clinical trials API and load API results to database*/
                 queryApiNUploadToDB(nctIds);
                 /* read from Excel sheet and upload curated fields to DB  */
-                processFile1("data/GT_tracker_with_sources.xlsx");
+                processFile1(fileName);
                 /*index clinical trials*/
                 fileProcess.indexClinicalTrials();
-            }
-               default -> {
-            }
+                break;
+            default :
         }
 
         String clusterStatus = this.getClusterHealth(Index.getNewAlias());
@@ -129,143 +129,143 @@ public class Main {
        // uploadClinicalTrails(nctIds);
         clinicalTrailDAO.downloadClinicalTrails(nctIds);
      //   fileProcess.indexClinicalTrials();
-        System.out.println("DONE!!");
+        System.out.println("Download from API and Upload to DB is DONE!!");
     }
 
     public boolean existsRecord(String nctId) throws Exception {
        List<ClinicalTrialRecord> records= clinicalTrailDAO.getClinicalTrailRecordByNctId(nctId);
        return records.size() > 0;
     }
-    public void uploadClinicalTrails(List<String> nctIds) throws Exception {
-        if(nctIds.size()>0) {
-            String baseURI="https://clinicaltrials.gov/api/v2/studies/";
-
-            RestClient restClient = RestClient.builder()
-                    .requestFactory(new HttpComponentsClientHttpRequestFactory())
-                    .baseUrl("https://clinicaltrials.gov/api/v2")
-                    .build();
-            ObjectMapper mapper= new ObjectMapper();
-            loop:  for (String nctId : nctIds) {
-                if (nctId == null || nctId.equals("") || nctId.equals("null"))
-                    continue loop;
-                //  String nctId="NCT02852213";
-                if (existsRecord(nctId)) {
-                   // clinicalTrailDAO.updateClinicalTrailRecord(nctId);
-                } else {
-                    String fetchUri = baseURI + nctId;
-                    try {
-                        String responseStr = restClient.get()
-                                .uri(fetchUri)
-                                .retrieve()
-                                .body(String.class);
-                        if (responseStr != null) {
-                            JSONObject jsonObject = new JSONObject(responseStr);
-
-                            //  System.out.println(jsonObject);
-
-                            Study study = mapper.readValue(jsonObject.toString(), Study.class);
-                            ClinicalTrialRecord record = new ClinicalTrialRecord();
-                            record.setNctId(nctId);
-                            record.setDescription(study.getProtocolSection().getDescriptionModule().getBriefSummary());
-                            StringBuilder interventions = new StringBuilder();
-                            StringBuilder interventionDescription = new StringBuilder();
-
-                            // System.out.println("Interventions");
-                            for (Intervention intervention : study.getProtocolSection().getArmsInterventionsModule().getInterventions()) {
-                                Map<String, Object> otherProps = intervention.getAdditionalProperties();
-                                interventions.append(intervention.getName());
-                                interventions.append(", ");
-                                interventionDescription.append(otherProps.get("description"));
-                                //  System.out.print(intervention.getName()+"\tOtherName:"+otherProps.get("otherNames")+"\tDosage:"+otherProps.get("description")+"\n");
-                            }
-                            record.setInterventionName(interventions.toString());
-                            record.setInterventionDescription(interventionDescription.toString());
-                            //   System.out.println("Sponsor:"+study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getName()+"\tCLASS:"+study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getClass_());
-                            record.setSponsor(study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getName());
-                            record.setSponsorClass(study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getClass_());
-                            //   System.out.println("Indication:"+ study.getProtocolSection().getConditionsModule().getConditions()+"\tKEYWORDS:"+study.getProtocolSection().getConditionsModule().getAdditionalProperties().get("keywords") );
-                            record.setIndication(String.join(", ", study.getProtocolSection().getConditionsModule().getConditions()));
-                            ArrayList<String> conditionKeywords = (ArrayList<String>) study.getProtocolSection().getConditionsModule().getAdditionalProperties().get("keywords");
-                            if (conditionKeywords != null && !conditionKeywords.isEmpty())
-                                record.setBrowseConditionTerms(conditionKeywords.stream().collect(Collectors.joining(", ")));
-                            //    System.out.println("Phases:"+study.getProtocolSection().getDesignModule().getPhases()+"\tEnrollmentCount:"+study.getProtocolSection().getDesignModule().getEnrollmentInfo().getCount());
-                            record.setPhase(String.join(", ", study.getProtocolSection().getDesignModule().getPhases()));
-                            record.setEnrorllmentCount(study.getProtocolSection().getDesignModule().getEnrollmentInfo().getCount());
-
-                            //   indexer.indexDocuments(object);
-                            //   System.out.println("locations:"+ study.getProtocolSection().getContactsLocationsModule().getLocations().size());
-                            if (study.getProtocolSection().getContactsLocationsModule() != null) {
-                                record.setLocation(String.join(",", study.getProtocolSection().getContactsLocationsModule().getLocations().stream().map(Location::getCountry).collect(Collectors.toSet())));
-                                record.setNumberOfLocations(study.getProtocolSection().getContactsLocationsModule().getLocations().size());
-                            }
-//                        System.out.print("Centers in USA:");
-//                        for(Location location:study.getProtocolSection().getContactsLocationsModule().getLocations()){
-//                            if(location.getCountry().equalsIgnoreCase("United States")){
-//                                System.out.print("Yes"+"\t");
-//                            }
-//                        }
-//                        System.out.println("\n");
-//                        System.out.println("Eligibility: \tSEX:"+study.getProtocolSection().getEligibilityModule().getSex()+"\tMin AGE:"+ study.getProtocolSection().getEligibilityModule().getMinimumAge()+"\t" +
-//                                "MAX AGE:"+study.getProtocolSection().getEligibilityModule().getMaximumAge() +"\tHEALTHY VOLUNTEERS:"+ study.getProtocolSection().getEligibilityModule().getHealthyVolunteers()+"\n" +
-//                                "Standard Age:"+ study.getProtocolSection().getEligibilityModule().getStdAges());
-
-                            record.setEligibilitySex(study.getProtocolSection().getEligibilityModule().getSex());
-                            record.setElibilityMinAge(study.getProtocolSection().getEligibilityModule().getMinimumAge());
-                            record.setElibilityMaxAge(study.getProtocolSection().getEligibilityModule().getMaximumAge());
-                            record.setHealthyVolunteers(study.getProtocolSection().getEligibilityModule().getHealthyVolunteers().toString());
-                            record.setStandardAge(String.join(",", study.getProtocolSection().getEligibilityModule().getStdAges()));
-
-
-                            record.setIsFDARegulated(String.valueOf(study.getProtocolSection().getOversightModule().getIsFdaRegulatedDrug()));
-                            record.setBriefTitle(study.getProtocolSection().getIdentificationModule().getBriefTitle());
-                            record.setOfficialTitle(study.getProtocolSection().getIdentificationModule().getOfficialTitle());
-                            if (study.getProtocolSection().getIdentificationModule().getAdditionalProperties().get("secondaryIdInfos") != null) {
-                                ArrayList object = (ArrayList) study.getProtocolSection().getIdentificationModule().getAdditionalProperties().get("secondaryIdInfos");
-                                StringBuilder builder = new StringBuilder();
-                                for (Object o : object) {
-                                    String link = ((Map<String, String>) o).get("link");
-                                    if (link != null)
-                                        builder.append(link).append(";");
-
-                                }
-
-                                record.setNihReportLink(builder.toString());
-                            }
-                            record.setStudyStatus(study.getProtocolSection().getStatusModule().getOverallStatus());
-                            record.setFirstSubmitDate((study.getProtocolSection().getStatusModule().getStudyFirstSubmitDate()));
-                            record.setEstimatedCompleteDate((study.getProtocolSection().getStatusModule().getCompletionDateStruct().getDate()));
-                            record.setLastUpdatePostDate((study.getProtocolSection().getStatusModule().getLastUpdatePostDateStruct().getDate()));
-//                        System.out.println("Derived Section Browse Branches:");
-//                        for(BrowseBranch branch:study.getDerivedSection().getConditionBrowseModule().getBrowseBranches()){
-//                            System.out.print(branch.getName()+",\t");
-//                        }
-//                        System.out.println("\nDerived Section Browse Leaf:");
-//                        for(Browseleaf branch:study.getDerivedSection().getConditionBrowseModule().getBrowseLeaves()){
-//                            System.out.print(branch.getName()+",\t");
-//                        }
-//                        System.out.println("\nDerived Section Browse Ancestors:");
-//                        for(Ancestor branch:study.getDerivedSection().getConditionBrowseModule().getAncestors()){
-//                            System.out.print(branch.getTerm()+",\t");
-//                        }
-//                        System.out.println("\nDerived Section Browse MEshes:");
-//                        for(Mesh branch:study.getDerivedSection().getConditionBrowseModule().getMeshes()){
-//                            System.out.print(branch.getTerm()+",\t");
-//                        }
+//    public void uploadClinicalTrails(List<String> nctIds) throws Exception {
+//        if(nctIds.size()>0) {
+//            String baseURI="https://clinicaltrials.gov/api/v2/studies/";
 //
-//                        System.out.println("Derived Section Browse intervention Branches:");
-//                        for(Map.Entry branch:((Map<String, Object>)study.getDerivedSection().getAdditionalProperties().get("interventionBrowseModule")).entrySet()){
-//                            System.out.print(branch.getValue()+",\t");
+//            RestClient restClient = RestClient.builder()
+//                    .requestFactory(new HttpComponentsClientHttpRequestFactory())
+//                    .baseUrl("https://clinicaltrials.gov/api/v2")
+//                    .build();
+//            ObjectMapper mapper= new ObjectMapper();
+//            loop:  for (String nctId : nctIds) {
+//                if (nctId == null || nctId.equals("") || nctId.equals("null"))
+//                    continue loop;
+//                //  String nctId="NCT02852213";
+//                if (existsRecord(nctId)) {
+//                   // clinicalTrailDAO.updateClinicalTrailRecord(nctId);
+//                } else {
+//                    String fetchUri = baseURI + nctId;
+//                    try {
+//                        String responseStr = restClient.get()
+//                                .uri(fetchUri)
+//                                .retrieve()
+//                                .body(String.class);
+//                        if (responseStr != null) {
+//                            JSONObject jsonObject = new JSONObject(responseStr);
+//
+//                            //  System.out.println(jsonObject);
+//
+//                            Study study = mapper.readValue(jsonObject.toString(), Study.class);
+//                            ClinicalTrialRecord record = new ClinicalTrialRecord();
+//                            record.setNctId(nctId);
+//                            record.setDescription(study.getProtocolSection().getDescriptionModule().getBriefSummary());
+//                            StringBuilder interventions = new StringBuilder();
+//                            StringBuilder interventionDescription = new StringBuilder();
+//
+//                            // System.out.println("Interventions");
+//                            for (Intervention intervention : study.getProtocolSection().getArmsInterventionsModule().getInterventions()) {
+//                                Map<String, Object> otherProps = intervention.getAdditionalProperties();
+//                                interventions.append(intervention.getName());
+//                                interventions.append(", ");
+//                                interventionDescription.append(otherProps.get("description"));
+//                                //  System.out.print(intervention.getName()+"\tOtherName:"+otherProps.get("otherNames")+"\tDosage:"+otherProps.get("description")+"\n");
+//                            }
+//                            record.setInterventionName(interventions.toString());
+//                            record.setInterventionDescription(interventionDescription.toString());
+//                            //   System.out.println("Sponsor:"+study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getName()+"\tCLASS:"+study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getClass_());
+//                            record.setSponsor(study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getName());
+//                            record.setSponsorClass(study.getProtocolSection().getSponsorCollaboratorsModule().getLeadSponsor().getClass_());
+//                            //   System.out.println("Indication:"+ study.getProtocolSection().getConditionsModule().getConditions()+"\tKEYWORDS:"+study.getProtocolSection().getConditionsModule().getAdditionalProperties().get("keywords") );
+//                            record.setIndication(String.join(", ", study.getProtocolSection().getConditionsModule().getConditions()));
+//                            ArrayList<String> conditionKeywords = (ArrayList<String>) study.getProtocolSection().getConditionsModule().getAdditionalProperties().get("keywords");
+//                            if (conditionKeywords != null && !conditionKeywords.isEmpty())
+//                                record.setBrowseConditionTerms(conditionKeywords.stream().collect(Collectors.joining(", ")));
+//                            //    System.out.println("Phases:"+study.getProtocolSection().getDesignModule().getPhases()+"\tEnrollmentCount:"+study.getProtocolSection().getDesignModule().getEnrollmentInfo().getCount());
+//                            record.setPhase(String.join(", ", study.getProtocolSection().getDesignModule().getPhases()));
+//                            record.setEnrorllmentCount(study.getProtocolSection().getDesignModule().getEnrollmentInfo().getCount());
+//
+//                            //   indexer.indexDocuments(object);
+//                            //   System.out.println("locations:"+ study.getProtocolSection().getContactsLocationsModule().getLocations().size());
+//                            if (study.getProtocolSection().getContactsLocationsModule() != null) {
+//                                record.setLocation(String.join(",", study.getProtocolSection().getContactsLocationsModule().getLocations().stream().map(Location::getCountry).collect(Collectors.toSet())));
+//                                record.setNumberOfLocations(study.getProtocolSection().getContactsLocationsModule().getLocations().size());
+//                            }
+////                        System.out.print("Centers in USA:");
+////                        for(Location location:study.getProtocolSection().getContactsLocationsModule().getLocations()){
+////                            if(location.getCountry().equalsIgnoreCase("United States")){
+////                                System.out.print("Yes"+"\t");
+////                            }
+////                        }
+////                        System.out.println("\n");
+////                        System.out.println("Eligibility: \tSEX:"+study.getProtocolSection().getEligibilityModule().getSex()+"\tMin AGE:"+ study.getProtocolSection().getEligibilityModule().getMinimumAge()+"\t" +
+////                                "MAX AGE:"+study.getProtocolSection().getEligibilityModule().getMaximumAge() +"\tHEALTHY VOLUNTEERS:"+ study.getProtocolSection().getEligibilityModule().getHealthyVolunteers()+"\n" +
+////                                "Standard Age:"+ study.getProtocolSection().getEligibilityModule().getStdAges());
+//
+//                            record.setEligibilitySex(study.getProtocolSection().getEligibilityModule().getSex());
+//                            record.setElibilityMinAge(study.getProtocolSection().getEligibilityModule().getMinimumAge());
+//                            record.setElibilityMaxAge(study.getProtocolSection().getEligibilityModule().getMaximumAge());
+//                            record.setHealthyVolunteers(study.getProtocolSection().getEligibilityModule().getHealthyVolunteers().toString());
+//                            record.setStandardAge(String.join(",", study.getProtocolSection().getEligibilityModule().getStdAges()));
+//
+//
+//                            record.setIsFDARegulated(String.valueOf(study.getProtocolSection().getOversightModule().getIsFdaRegulatedDrug()));
+//                            record.setBriefTitle(study.getProtocolSection().getIdentificationModule().getBriefTitle());
+//                            record.setOfficialTitle(study.getProtocolSection().getIdentificationModule().getOfficialTitle());
+//                            if (study.getProtocolSection().getIdentificationModule().getAdditionalProperties().get("secondaryIdInfos") != null) {
+//                                ArrayList object = (ArrayList) study.getProtocolSection().getIdentificationModule().getAdditionalProperties().get("secondaryIdInfos");
+//                                StringBuilder builder = new StringBuilder();
+//                                for (Object o : object) {
+//                                    String link = ((Map<String, String>) o).get("link");
+//                                    if (link != null)
+//                                        builder.append(link).append(";");
+//
+//                                }
+//
+//                                record.setNihReportLink(builder.toString());
+//                            }
+//                            record.setStudyStatus(study.getProtocolSection().getStatusModule().getOverallStatus());
+//                            record.setFirstSubmitDate((study.getProtocolSection().getStatusModule().getStudyFirstSubmitDate()));
+//                            record.setEstimatedCompleteDate((study.getProtocolSection().getStatusModule().getCompletionDateStruct().getDate()));
+//                            record.setLastUpdatePostDate((study.getProtocolSection().getStatusModule().getLastUpdatePostDateStruct().getDate()));
+////                        System.out.println("Derived Section Browse Branches:");
+////                        for(BrowseBranch branch:study.getDerivedSection().getConditionBrowseModule().getBrowseBranches()){
+////                            System.out.print(branch.getName()+",\t");
+////                        }
+////                        System.out.println("\nDerived Section Browse Leaf:");
+////                        for(Browseleaf branch:study.getDerivedSection().getConditionBrowseModule().getBrowseLeaves()){
+////                            System.out.print(branch.getName()+",\t");
+////                        }
+////                        System.out.println("\nDerived Section Browse Ancestors:");
+////                        for(Ancestor branch:study.getDerivedSection().getConditionBrowseModule().getAncestors()){
+////                            System.out.print(branch.getTerm()+",\t");
+////                        }
+////                        System.out.println("\nDerived Section Browse MEshes:");
+////                        for(Mesh branch:study.getDerivedSection().getConditionBrowseModule().getMeshes()){
+////                            System.out.print(branch.getTerm()+",\t");
+////                        }
+////
+////                        System.out.println("Derived Section Browse intervention Branches:");
+////                        for(Map.Entry branch:((Map<String, Object>)study.getDerivedSection().getAdditionalProperties().get("interventionBrowseModule")).entrySet()){
+////                            System.out.print(branch.getValue()+",\t");
+////                        }
+//                            clinicalTrailDAO.insert(record);
 //                        }
-                            clinicalTrailDAO.insert(record);
-                        }
-                    } catch (Exception exception) {
-                        System.out.println("NCTID:" + nctId);
-                        exception.printStackTrace();
-                    }
-                }
-            }
-        }
-    }
+//                    } catch (Exception exception) {
+//                        System.out.println("NCTID:" + nctId);
+//                        exception.printStackTrace();
+//                    }
+//                }
+//            }
+//        }
+//    }
 //    public void indexClinicalTrails() throws Exception {
 //        List<ClinicalTrialCuratedData> records=clinicalTrailDAO.getAllClinicalTrailRecords();
 //        if(records.size()>0){
@@ -301,41 +301,41 @@ public class Main {
 //                "&filter.advanced=+AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
 
 
-        String nextPageToken=null;
-        do {
-            String fetchUri=null;
-            RestClient restClient = RestClient.builder()
-                    .requestFactory(new HttpComponentsClientHttpRequestFactory())
-                    .baseUrl("https://clinicaltrials.gov/api/v2")
-                    .build();
-            if(nextPageToken!=null){
-               fetchUri=baseURI+"&pageToken="+nextPageToken;
-            }else fetchUri=baseURI;
-            try {
-                String responseStr = restClient.get()
-                        .uri(fetchUri)
-                        .retrieve()
-                        .body(String.class);
-                if (responseStr != null) {
-                    JSONObject jsonObject = new JSONObject(responseStr);
-                    JSONArray array = (JSONArray) jsonObject.get("studies");
-                    for (Object object : array) {
-                        //    System.out.println(object);
-                        indexer.indexDocuments(object);
-                    }
-                    try {
-                        nextPageToken = jsonObject.get("nextPageToken") != null ? (String) jsonObject.get("nextPageToken") : null;
-                    } catch (Exception e) {
-                        nextPageToken = null;
-                        e.printStackTrace();
-                    }
-
-
-                }
-            }catch (Exception exception){
-                exception.printStackTrace();
-            }
-        }while(nextPageToken!=null);
+//        String nextPageToken=null;
+//        do {
+//            String fetchUri=null;
+//            RestClient restClient = RestClient.builder()
+//                    .requestFactory(new HttpComponentsClientHttpRequestFactory())
+//                    .baseUrl("https://clinicaltrials.gov/api/v2")
+//                    .build();
+//            if(nextPageToken!=null){
+//               fetchUri=baseURI+"&pageToken="+nextPageToken;
+//            }else fetchUri=baseURI;
+//            try {
+//                String responseStr = restClient.get()
+//                        .uri(fetchUri)
+//                        .retrieve()
+//                        .body(String.class);
+//                if (responseStr != null) {
+//                    JSONObject jsonObject = new JSONObject(responseStr);
+//                    JSONArray array = (JSONArray) jsonObject.get("studies");
+//                    for (Object object : array) {
+//                        //    System.out.println(object);
+//                        indexer.indexDocuments(object);
+//                    }
+//                    try {
+//                        nextPageToken = jsonObject.get("nextPageToken") != null ? (String) jsonObject.get("nextPageToken") : null;
+//                    } catch (Exception e) {
+//                        nextPageToken = null;
+//                        e.printStackTrace();
+//                    }
+//
+//
+//                }
+//            }catch (Exception exception){
+//                exception.printStackTrace();
+//            }
+//        }while(nextPageToken!=null);
     }
     public void setVersion(String version) {
     }

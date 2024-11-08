@@ -111,7 +111,7 @@ public class ProcessFile {
 
                     }
                 }
-                if(!notes.isEmpty())
+                if(!notes.toString().isEmpty())
                 sb.append(",\"notes\":").append("\"").append(notes).append("\"");
                 sb.append("}");
                 ClinicalTrialRecord rec=mapper.readValue(sb.toString(), ClinicalTrialRecord.class);
@@ -277,7 +277,7 @@ public class ProcessFile {
 
                     }
                 }
-                if(!notes.isEmpty())
+                if(!notes.toString().isEmpty())
                     sb.append(",\"notes\":").append("\"").append(notes).append("\"");
                 String interventionDescription=getInterventionDescription(NCTNumber);
                 if(interventionDescription!=null && !interventionDescription.equals("")) {
@@ -314,7 +314,7 @@ public class ProcessFile {
         List<String> nctIds=new ArrayList<>();
         int i=0;
         for (Row row : sheet) {
-            if (row.getRowNum() > 4){
+            if (row.getRowNum() > 12){
                 String NCTNumber = String.valueOf(row.getCell(0));
                 nctIds.add(NCTNumber);
             i++;
@@ -323,6 +323,7 @@ public class ProcessFile {
         }
 
         fs.close();
+        System.out.println("NCTIDS:"+ nctIds.toString());
      return nctIds;
     }
     public void index(String sb) throws IOException {
@@ -355,7 +356,7 @@ public class ProcessFile {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
 
         for(ClinicalTrialRecord trial:trials){
-            formatRecordValue(trial);
+        //   formatRecordValue(trial);
             List<ClinicalTrialExternalLink> externalLinks=  clinicalTrailDAO.getExtLinksByNctId(trial.getNctId());
             if(externalLinks!=null && externalLinks.size()>0)
               trial.setExternalLinks(externalLinks);
@@ -369,7 +370,7 @@ public class ProcessFile {
           object.setStatus(Arrays.stream(trial.getStudyStatus().split(",")).map(String::trim).collect(Collectors.toSet()));
             if(trial.getLocation()!=null)
             object.setLocations(Arrays.stream(trial.getLocation().split(",")).map(String::trim).collect(Collectors.toSet()));
-
+            object.setCategory("ClinicalTrial");
           indexClinicalTrailRecord(object);
         }
     }
