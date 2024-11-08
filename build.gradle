@@ -89,7 +89,6 @@ startScripts {
 }
 
 jar {
-    archivesBaseName = myAppName
     manifest {
         attributes(
                 'Built-By': System.getProperty('user.name'),
@@ -100,7 +99,7 @@ jar {
 }
 distributions {
     main {
-        archivesBaseName = myAppName
+        distributionBaseName = myAppName
     }
 }
 
