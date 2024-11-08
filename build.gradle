@@ -1,10 +1,14 @@
 plugins {
     id 'java'
 }
+apply plugin: 'java'
+apply plugin: 'application'
 
-group 'org.example'
 version '1.0-SNAPSHOT'
-
+mainClassName="edu.mcw.scge.platform.Main"
+String myAppName="clinical-trails-pipeline"
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 repositories {
     mavenCentral()
 }
@@ -80,6 +84,22 @@ dependencies {
 
 
 }
+startScripts {
+    applicationName = myAppName
+}
+
+jar {
+    baseName = myAppName
+    manifest {
+        attributes(
+                'Built-By': System.getProperty('user.name'),
+                'Built-Date': new Date(),
+                'Built-JDK': System.getProperty('java.version')
+        )
+    }
+}
+
+
 task update_core(type:Copy){
     // from file("C:/Users/jthota/Documents/git/scge-core/build/libs/scge-core-1.0.jar")
 
