@@ -47,8 +47,7 @@ public class ProcessFile {
            throw new Exception("Sheet is null");
         }
         SimpleDateFormat dateFormat=new SimpleDateFormat("MM/dd/yyy");
-        Row headerRow=sheet.getRow(13);
-
+        Row headerRow=sheet.getRow(12);
         ObjectMapper mapper=JsonMapper.builder().
                 enable( JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER).build();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
@@ -120,8 +119,11 @@ public class ProcessFile {
                 }catch (Exception e){
                     e.printStackTrace();
                 }
-                uploadXLinks(sb.toString());
-
+                try {
+                    uploadXLinks(sb.toString());
+                }catch (Exception e){
+                    System.err.println(sb.toString());
+                }
             }
 
         }
