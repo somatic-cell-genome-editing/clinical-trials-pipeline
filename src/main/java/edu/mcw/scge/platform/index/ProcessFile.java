@@ -55,7 +55,7 @@ public class ProcessFile {
 
      loop:   for (Row row : sheet) {
 
-            if (row.getRowNum() >4 ) {
+            if (row.getRowNum() >12 ) {
                 String NCTNumber= String.valueOf(row.getCell(0));
                 if( NCTNumber==null || NCTNumber.trim().isEmpty() || NCTNumber.equals("null")){
                     continue loop;
@@ -116,7 +116,6 @@ public class ProcessFile {
                 sb.append("}");
                 ClinicalTrialRecord rec=mapper.readValue(sb.toString(), ClinicalTrialRecord.class);
                 try {
-                  //  clinicalTrailDAO.insert(rec);
                     clinicalTrailDAO.updateCuratedDataFields(rec);
                 }catch (Exception e){
                     e.printStackTrace();
@@ -344,6 +343,7 @@ public class ProcessFile {
          index(allData);
     }
     public void parseFileNLoadToDB(String file) throws Exception {
+        System.out.println("Processing file to load clinical trial curated fields .." + file);
         parseFileAndMapDB(file, "all data");
     }
     public void indexClinicalTrials() throws Exception {
