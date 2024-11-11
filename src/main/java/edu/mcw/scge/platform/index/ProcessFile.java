@@ -115,8 +115,6 @@ public class ProcessFile {
                 sb.append("}");
                 ClinicalTrialRecord rec=mapper.readValue(sb.toString(), ClinicalTrialRecord.class);
                 try {
-                    System.out.println("SB:"+sb.toString()+"\n");
-                    System.out.println("REC JSON:"+gson.toJson(rec)+"\n=====================================");
                     clinicalTrailDAO.updateCuratedDataFields(rec);
                 }catch (Exception e){
                     e.printStackTrace();
@@ -358,6 +356,7 @@ public class ProcessFile {
                 //.enable(JsonParser.Feature.INCLUDE_SOURCE_IN_LOCATION)
                 .build();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+
 
         for(ClinicalTrialRecord trial:trials){
         //   formatRecordValue(trial);
