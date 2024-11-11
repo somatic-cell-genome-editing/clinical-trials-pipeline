@@ -115,6 +115,7 @@ public class ProcessFile {
                 sb.append("}");
                 ClinicalTrialRecord rec=mapper.readValue(sb.toString(), ClinicalTrialRecord.class);
                 try {
+                    System.out.println(rec);
                     clinicalTrailDAO.updateCuratedDataFields(rec);
                 }catch (Exception e){
                     e.printStackTrace();
