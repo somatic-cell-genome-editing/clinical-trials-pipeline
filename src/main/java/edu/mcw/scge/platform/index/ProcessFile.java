@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 
 public class ProcessFile {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
-
+    Gson gson=new Gson();
     public void parseFileAndMapDB(String file, String sheetName) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
@@ -115,7 +115,8 @@ public class ProcessFile {
                 sb.append("}");
                 ClinicalTrialRecord rec=mapper.readValue(sb.toString(), ClinicalTrialRecord.class);
                 try {
-                    System.out.println(rec);
+                    System.out.println("SB:"+sb.toString()+"\n");
+                    System.out.println("REC JSON:"+gson.toJson(rec)+"\n=====================================");
                     clinicalTrailDAO.updateCuratedDataFields(rec);
                 }catch (Exception e){
                     e.printStackTrace();
