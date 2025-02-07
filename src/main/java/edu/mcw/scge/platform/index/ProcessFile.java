@@ -457,18 +457,18 @@ public class ProcessFile {
     }
     public void indexClinicalTrailRecord(ClinicalTrialIndexObject record) throws IOException {
 
-//        JSONObject jsonObject = new JSONObject(record);
-//        IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
-//        ESClient.getClient().index(request, RequestOptions.DEFAULT);
-//        RefreshRequest refreshRequest = new RefreshRequest();
-//        ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
-        if(BulkIndexProcessor.bulkProcessor==null){
-            BulkIndexProcessor.getInstance();
-        }
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-        String json = mapper.writeValueAsString(record);
-        BulkIndexProcessor.bulkProcessor.add(new IndexRequest(Index.getNewAlias()).source(json, XContentType.JSON));
+        JSONObject jsonObject = new JSONObject(record);
+        IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
+        ESClient.getClient().index(request, RequestOptions.DEFAULT);
+        RefreshRequest refreshRequest = new RefreshRequest();
+        ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
+//        if(BulkIndexProcessor.bulkProcessor==null){
+//            BulkIndexProcessor.getInstance();
+//        }
+//        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+//        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+//        String json = mapper.writeValueAsString(record);
+//        BulkIndexProcessor.bulkProcessor.add(new IndexRequest(Index.getNewAlias()).source(json, XContentType.JSON));
     }
     public void updateClinicalTrailRecord(ClinicalTrialIndexObject record) throws Exception {
 
