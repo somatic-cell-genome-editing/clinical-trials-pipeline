@@ -355,6 +355,7 @@ public class ProcessFile {
     public void indexClinicalTrials() throws Exception {
         Gson gson=new Gson();
         List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
+        System.out.println("CT TRIALS:"+ trials.size());
         ObjectMapper mapper=JsonMapper.builder().
                 enable( JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
                 //.enable(JsonParser.Feature.INCLUDE_SOURCE_IN_LOCATION)

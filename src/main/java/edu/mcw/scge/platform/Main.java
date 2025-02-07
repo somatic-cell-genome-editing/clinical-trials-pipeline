@@ -77,7 +77,7 @@ public class Main {
 
     public void run() throws Exception {
         long start = System.currentTimeMillis();
-        String fileName="data/GT_tracker_release1.xlsx";
+        String fileName="/data/GT_tracker_release1.xlsx";
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
         switch (source) {
