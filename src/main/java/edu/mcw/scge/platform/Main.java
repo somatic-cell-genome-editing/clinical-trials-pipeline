@@ -77,7 +77,7 @@ public class Main {
 
     public void run() throws Exception {
         long start = System.currentTimeMillis();
-        String fileName="/data/GT_tracker_release1.xlsx";
+        String fileName="data/GT_tracker_release1.xlsx";
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
         switch (source) {
@@ -95,6 +95,20 @@ public class Main {
                 queryApiNUploadToDB(nctIds);
                 /* read from Excel sheet and upload curated fields to DB  */
                 processFile1(fileName);
+                /*index clinical trials*/
+                fileProcess.indexClinicalTrials();
+                break;
+            case "update-and-index-db" :
+                List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
+                List<String> nctIdsFromDB= trials.stream().map(t->t.getNctId()).collect(Collectors.toList());
+                /* Query clinical trials API and load API results to database*/
+                queryApiNUploadToDB(nctIdsFromDB);
+                /* read from Excel sheet and upload curated fields to DB  */
+//                processFile1(fileName);
+                /*index clinical trials*/
+                fileProcess.indexClinicalTrials();
+                break;
+            case "index-only-from-db" :
                 /*index clinical trials*/
                 fileProcess.indexClinicalTrials();
                 break;

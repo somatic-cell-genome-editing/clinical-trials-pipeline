@@ -86,31 +86,15 @@ public class IndexAdmin {
             Index.setNewAlias(index);
 
     }
-    public void indexDocuments(Object str) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-
-        BulkRequest bulkRequest = new BulkRequest();
-        bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-        //    bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL);
-        //  bulkRequest.timeout(TimeValue.timeValueMinutes(2));
-        //  bulkRequest.timeout("2m");
-
-
-        try {
-            bulkRequest.add(new IndexRequest(Index.getNewAlias()).source(str.toString(), XContentType.JSON));
-        } catch (Exception e) {
-            e.printStackTrace();
+    public void updateIndex(String index) throws Exception {
+        Index.setIndex(index);
+        if(Index.getIndex()!=null) {
+            GetIndexRequest request=new GetIndexRequest(Index.getIndex());
+            boolean indicesExists=ESClient.getClient().indices().exists(request, RequestOptions.DEFAULT);
+            if (indicesExists) {  /* CHECK IF INDEX NAME PROVIDED EXISTS*/
+                Index.setNewAlias(Index.getIndex());
+            }
         }
-        //     bulkRequestBuilder.add(new IndexRequest(index, type,o.getTerm_acc()).source(json, XContentType.JSON));
-
-
-        ESClient.getClient().bulk(bulkRequest, RequestOptions.DEFAULT);
-
-        RefreshRequest refreshRequest = new RefreshRequest();
-        ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
-
     }
 
     public Index getIndex() {
