@@ -1,5 +1,5 @@
 . /etc/profile
-APPNAME=clinical-trails-pipeline
+APPNAME=clinical-trials-pipeline
 APPDIR=/data/pipelines/$APPNAME
 SERVER=`hostname -s | tr '[a-z]' '[A-Z]'`
 EMAIL_LIST=jthota@mcw.edu
