@@ -6,7 +6,7 @@ apply plugin: 'application'
 
 version '1.0-SNAPSHOT'
 mainClassName="edu.mcw.scge.platform.Main"
-String myAppName="clinical-trails-pipeline"
+String myAppName="clinical-trials-pipeline"
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 repositories {
