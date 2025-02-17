@@ -49,8 +49,8 @@ public class Main {
         manager.source=args[2];
 
      //   String index="scge_platform_search";
-//        String index="scge_platform_search_ct";
-        String index= SCGEContext.getESIndexName();
+      String index="scge_platform_search_ct_"+manager.env;
+      //  String index= SCGEContext.getESIndexName();
         List<String> indices= new ArrayList<>();
         if (environments.contains(manager.env)) {
             manager.index.setIndex( index);
