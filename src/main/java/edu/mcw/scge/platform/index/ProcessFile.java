@@ -27,6 +27,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.common.recycler.Recycler;
 import org.elasticsearch.xcontent.XContentType;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,6 +44,102 @@ public class ProcessFile {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     Gson gson=new Gson();
     ObjectMapper mapper=new ObjectMapper();
+    public void parseFileFields(String file, String sheetName) throws Exception {
+        FileInputStream fs=new FileInputStream(new File(file));
+        XSSFWorkbook workbook=new XSSFWorkbook(fs);
+        XSSFSheet sheet=workbook.getSheet(sheetName);
+        if(sheet==null){
+            throw new Exception("Sheet is null");
+        }
+        ObjectMapper mapper=JsonMapper.builder().
+                enable( JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER).build();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+
+          for (Row row : sheet) {
+
+            if (row.getRowNum() >4) {
+                String NCTNumber= String.valueOf(row.getCell(0));
+                Iterator<Cell> cellIterator=row.cellIterator();
+                if( NCTNumber==null || NCTNumber.trim().isEmpty() || NCTNumber.equals("null") || NCTNumber.equals("")){
+                    continue;
+                }
+                ClinicalTrialRecord record=new ClinicalTrialRecord();
+                List<ClinicalTrialExternalLink> externalLinks=new ArrayList<>();
+                while (cellIterator.hasNext()) {
+
+                    Cell cell = cellIterator.next();
+                    int colIndex = cell.getColumnIndex();
+
+                    if(colIndex==0) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String     columnVal = String.valueOf(row.getCell(colIndex));
+                            record.setNctId(columnVal);
+                        }
+                    }
+                    if(colIndex==1) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String  columnVal = String.valueOf(row.getCell(colIndex));
+                            record.setDevelopmentStatus(columnVal);
+                        }
+                    }
+                    if(colIndex==4) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String  columnVal = String.valueOf(row.getCell(colIndex));
+
+                            record.setIndicationDOID(columnVal.replace(".0",""));
+                        }
+                    }
+                    if(colIndex==6) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String   columnVal = String.valueOf(row.getCell(colIndex));
+                            record.setFdaDesignation(columnVal);
+                        }
+                    }
+                    if(colIndex==2) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String    columnVal = String.valueOf(row.getCell(colIndex));
+                            String[] relatedIds = columnVal.split(";");
+                            for(String id:relatedIds){
+                                ClinicalTrialExternalLink link= new ClinicalTrialExternalLink();
+                                link.setType("Related NCTID");
+                                link.setName(id);
+                                link.setLink("https://www.clinicaltrials.gov/study/"+id);
+                                link.setNctId(NCTNumber);
+                                externalLinks.add(link);
+
+                            }
+                        }
+                    }
+
+                }
+
+                try {
+                    if(record.getNctId()!=null) {
+                        System.out.println("ROW " + row.getRowNum() + "\t" + gson.toJson(record));
+                        clinicalTrailDAO.updateSomeNewFieldsDataFields(record);
+
+                    }
+                }catch (Exception e){
+                    System.out.println(record.getNctId());
+                    e.printStackTrace();
+                }
+                try {
+                    for(ClinicalTrialExternalLink xLink:externalLinks){
+                        if(!clinicalTrailDAO.existsExternalLink(xLink)) {
+                            int id=clinicalTrailDAO.getNextKey("clinical_trial_ext_links_seq");
+                            xLink.setId(id);
+                            clinicalTrailDAO.insertExternalLink(xLink);
+                        }
+                    }
+                }catch (Exception e){
+                  //  System.err.println(sb.toString());
+                }
+            }
+
+        }
+
+        fs.close();
+    }
     public void parseFileAndMapDB(String file, String sheetName) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
@@ -312,14 +409,14 @@ public class ProcessFile {
         FileInputStream fs=new FileInputStream(new File(file));
 
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
-        XSSFSheet sheet=workbook.getSheet("all data");
+        XSSFSheet sheet=workbook.getSheet("updated on STAGE");
         if(sheet==null){
             return null;
         }
         List<String> nctIds=new ArrayList<>();
         int i=0;
         for (Row row : sheet) {
-            if (row.getRowNum() > 12){
+            if (row.getRowNum() > 4){
                 String NCTNumber = String.valueOf(row.getCell(0));
                 nctIds.add(NCTNumber);
             i++;

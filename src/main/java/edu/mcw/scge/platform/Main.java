@@ -77,13 +77,14 @@ public class Main {
 
     public void run() throws Exception {
         long start = System.currentTimeMillis();
-        String fileName="/data/GT_tracker_release1.xlsx";
+        String fileName="data/GT_tracker_release2_WIP.xlsx";
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
         switch (source) {
             case "api" :
                 /* download all data from clinical trails API and load to database. */
-                    download();break;
+                    download();
+                    break;
             case "file" :
                 /* read from Excel sheet and directly index json string into the ES*/
                     processFile(fileName);
@@ -91,12 +92,16 @@ public class Main {
             case "file1" :
                 /*read NCTIDS from Excel sheet */
                 List<String> nctIds= parseNCTIds(fileName);
+                System.out.println("NCTIDS:"+ nctIds);
                 /* Query clinical trials API and load API results to database*/
                 queryApiNUploadToDB(nctIds);
                 /* read from Excel sheet and upload curated fields to DB  */
                 processFile1(fileName);
                 /*index clinical trials*/
                 fileProcess.indexClinicalTrials();
+                break;
+            case "release2_file" :
+                extractNewFieldsFromFile(fileName,"updated on STAGE" );
                 break;
             case "update-and-index-db" :
                 List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
@@ -135,6 +140,10 @@ public class Main {
     public void processFile1(String filename) throws Exception {
         ProcessFile fileProcess=new ProcessFile();
         fileProcess.parseFileNLoadToDB(filename);
+    }
+    public void extractNewFieldsFromFile(String filename, String sheet) throws Exception {
+        ProcessFile fileProcess=new ProcessFile();
+        fileProcess.parseFileFields(filename,sheet);
     }
     public List<String> parseNCTIds(String filename) throws Exception {
         return fileProcess.parseFileForNCTIds(filename);
