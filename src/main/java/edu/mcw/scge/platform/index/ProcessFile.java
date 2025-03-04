@@ -10,8 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.gson.Gson;
 import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
+import edu.mcw.scge.datamodel.Alias;
 import edu.mcw.scge.datamodel.ClinicalTrialExternalLink;
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
+import edu.mcw.scge.platform.model.platform.AliasType;
 import edu.mcw.scge.platform.utils.BulkIndexProcessor;
 import edu.mcw.scge.services.ESClient;
 import edu.mcw.scge.services.SCGEContext;
@@ -65,6 +67,7 @@ public class ProcessFile {
                 }
                 ClinicalTrialRecord record=new ClinicalTrialRecord();
                 List<ClinicalTrialExternalLink> externalLinks=new ArrayList<>();
+                List<Alias> aliases=new ArrayList<>();
                 while (cellIterator.hasNext()) {
 
                     Cell cell = cellIterator.next();
@@ -111,11 +114,41 @@ public class ProcessFile {
                         }
                     }
 
+                    if(colIndex==7) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String   columnVal = String.valueOf(row.getCell(colIndex));
+                            String compoundName=null;
+                            if(columnVal.contains("(")) {
+                                String compoundDescription = columnVal.substring(columnVal.indexOf("(") + 1, columnVal.indexOf(")"));
+                                record.setCompoundDescription(compoundDescription);
+                                 compoundName=columnVal.substring(0,columnVal.indexOf("("));
+
+                            }else{
+                                compoundName=columnVal;
+                            }
+                            String[] names=compoundName.split("/");
+                            record.setCompoundName(names[0]);
+                            System.out.println("COMPOUN NAME RECORD VAL:"+ record.getCompoundName());
+                            if(names.length>1) {
+
+
+                                for (int i = 1; i <names.length; i++) {
+                                    Alias alias=new Alias();
+                                    alias.setIdentifier(NCTNumber);
+                                    alias.setAlias(names[i]);
+                                    alias.setAliasTypeLC(AliasType.getTypeByCode(i).getDescription());
+                                    alias.setFieldName("compound");
+                                    aliases.add((alias));
+                                }
+                            }
+                        }
+                    }
+
                 }
 
                 try {
                     if(record.getNctId()!=null) {
-                        System.out.println("ROW " + row.getRowNum() + "\t" + gson.toJson(record));
+                      //  System.out.println("ROW " + row.getRowNum() + "\t" + gson.toJson(record));
                         clinicalTrailDAO.updateSomeNewFieldsDataFields(record);
 
                     }
@@ -132,7 +165,13 @@ public class ProcessFile {
                         }
                     }
                 }catch (Exception e){
-                  //  System.err.println(sb.toString());
+                }
+                try {
+                    for(Alias alias:aliases){
+                        clinicalTrailDAO.insertAlias(alias);
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
                 }
             }
 
