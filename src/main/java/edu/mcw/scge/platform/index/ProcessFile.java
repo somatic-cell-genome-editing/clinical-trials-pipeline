@@ -95,7 +95,7 @@ public class ProcessFile {
                     if(colIndex==6) {
                         if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
                             String   columnVal = String.valueOf(row.getCell(colIndex));
-                            record.setFDADesignation(columnVal);
+                            record.setFdaDesignation(columnVal);
                         }
                     }
                     if(colIndex==2) {
@@ -157,19 +157,19 @@ public class ProcessFile {
                     e.printStackTrace();
                 }
                 try {
-                    for(ClinicalTrialExternalLink xLink:externalLinks){
-                        if(!clinicalTrailDAO.existsExternalLink(xLink)) {
-                            int id=clinicalTrailDAO.getNextKey("clinical_trial_ext_links_seq");
-                            xLink.setId(id);
-                            clinicalTrailDAO.insertExternalLink(xLink);
-                        }
-                    }
+//                    for(ClinicalTrialExternalLink xLink:externalLinks){
+//                        if(!clinicalTrailDAO.existsExternalLink(xLink)) {
+//                            int id=clinicalTrailDAO.getNextKey("clinical_trial_ext_links_seq");
+//                            xLink.setId(id);
+//                            clinicalTrailDAO.insertExternalLink(xLink);
+//                        }
+//                    }
                 }catch (Exception e){
                 }
                 try {
-                    for(Alias alias:aliases){
-                        clinicalTrailDAO.insertAlias(alias);
-                    }
+//                    for(Alias alias:aliases){
+//                        clinicalTrailDAO.insertAlias(alias);
+//                    }
                 }catch (Exception e){
                     e.printStackTrace();
                 }

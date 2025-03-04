@@ -102,6 +102,7 @@ public class Main {
                 break;
             case "release2_file" :
                 extractNewFieldsFromFile(fileName,"updated on STAGE" );
+                fileProcess.indexClinicalTrials();
                 break;
             case "update-and-index-db" :
                 List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
