@@ -95,7 +95,7 @@ public class ProcessFile {
                     if(colIndex==6) {
                         if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
                             String   columnVal = String.valueOf(row.getCell(colIndex));
-                            record.setFdaDesignation(columnVal);
+                            record.setFDADesignation(columnVal);
                         }
                     }
                     if(colIndex==2) {
