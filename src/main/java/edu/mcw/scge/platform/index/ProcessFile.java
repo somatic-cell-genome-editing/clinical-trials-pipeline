@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.gson.Gson;
 import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
 import edu.mcw.scge.datamodel.Alias;
+import edu.mcw.scge.datamodel.ClinicalTrialAdditionalInfo;
 import edu.mcw.scge.datamodel.ClinicalTrialExternalLink;
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
 import edu.mcw.scge.platform.model.platform.AliasType;
@@ -68,6 +69,7 @@ public class ProcessFile {
                 ClinicalTrialRecord record=new ClinicalTrialRecord();
                 List<ClinicalTrialExternalLink> externalLinks=new ArrayList<>();
                 List<Alias> aliases=new ArrayList<>();
+                List<ClinicalTrialAdditionalInfo> info=new ArrayList<>();
                 while (cellIterator.hasNext()) {
 
                     Cell cell = cellIterator.next();
@@ -95,7 +97,15 @@ public class ProcessFile {
                     if(colIndex==6) {
                         if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
                             String   columnVal = String.valueOf(row.getCell(colIndex));
-                            record.setFdaDesignation(columnVal);
+                            String[] fdaDesignations=columnVal.split(",");
+                            for(String fdaDesignation:fdaDesignations) {
+                                ClinicalTrialAdditionalInfo i = new ClinicalTrialAdditionalInfo();
+                                i.setNctId(NCTNumber.trim());
+                                i.setPropertyName("fda_designation");
+                                i.setPropertyValue(fdaDesignation.trim());
+                                info.add(i);
+                                // record.setFdaDesignation(columnVal);
+                            }
                         }
                     }
                     if(colIndex==2) {
@@ -148,7 +158,7 @@ public class ProcessFile {
 
                 try {
                     if(record.getNctId()!=null) {
-                      //  System.out.println("ROW " + row.getRowNum() + "\t" + gson.toJson(record));
+                        System.out.println("ROW " + row.getRowNum() + "\t" + gson.toJson(record));
                         clinicalTrailDAO.updateSomeNewFieldsDataFields(record);
 
                     }
@@ -157,19 +167,28 @@ public class ProcessFile {
                     e.printStackTrace();
                 }
                 try {
-//                    for(ClinicalTrialExternalLink xLink:externalLinks){
-//                        if(!clinicalTrailDAO.existsExternalLink(xLink)) {
-//                            int id=clinicalTrailDAO.getNextKey("clinical_trial_ext_links_seq");
-//                            xLink.setId(id);
-//                            clinicalTrailDAO.insertExternalLink(xLink);
-//                        }
-//                    }
+                    for(ClinicalTrialExternalLink xLink:externalLinks){
+                        if(!clinicalTrailDAO.existsExternalLink(xLink)) {
+                            int id=clinicalTrailDAO.getNextKey("clinical_trial_ext_links_seq");
+                            xLink.setId(id);
+                            clinicalTrailDAO.insertExternalLink(xLink);
+                        }
+                    }
                 }catch (Exception e){
                 }
                 try {
-//                    for(Alias alias:aliases){
-//                        clinicalTrailDAO.insertAlias(alias);
-//                    }
+                    for(Alias alias:aliases){
+                        if(!clinicalTrailDAO.existsAlias(alias))
+                        clinicalTrailDAO.insertAlias(alias);
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+                try {
+                    for(ClinicalTrialAdditionalInfo additionalInfo:info){
+                        if(!clinicalTrailDAO.existsInfo(additionalInfo))
+                            clinicalTrailDAO.insertAdditionalInfo(additionalInfo);
+                    }
                 }catch (Exception e){
                     e.printStackTrace();
                 }
