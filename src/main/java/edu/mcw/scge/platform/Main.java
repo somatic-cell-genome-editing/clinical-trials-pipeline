@@ -9,6 +9,7 @@ import edu.mcw.scge.platform.index.ProcessFile;
 import edu.mcw.scge.platform.model.*;
 
 
+import edu.mcw.scge.platform.utils.OntologyProcessor;
 import edu.mcw.scge.process.Utils;
 import edu.mcw.scge.services.ESClient;
 import edu.mcw.scge.services.SCGEContext;
@@ -40,6 +41,7 @@ public class Main {
     private static List environments;
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     ProcessFile fileProcess=new ProcessFile();
+    OntologyProcessor ontologyProcessor=new OntologyProcessor();
     public static void main(String[] args) throws IOException {
         DefaultListableBeanFactory bf= new DefaultListableBeanFactory();
         new XmlBeanDefinitionReader(bf) .loadBeanDefinitions(new FileSystemResource("properties/AppConfigure.xml"));
@@ -118,6 +120,9 @@ public class Main {
                 /*index clinical trials*/
                 fileProcess.indexClinicalTrials();
                 break;
+            case "update-ontology-terms" :
+                ontologyProcessor.uploadParentTerms();
+                break;
             default :
         }
 
@@ -134,6 +139,10 @@ public class Main {
         System.out.println(" - " + Utils.formatElapsedTime(start, end));
         System.out.println("CLIENT IS CLOSED");
     }
+    public List<String> getIndicationDOIDs() throws Exception {
+        List<ClinicalTrialRecord> records=clinicalTrailDAO.getAllClinicalTrailRecords();
+        return records.stream().map(ClinicalTrialRecord::getIndicationDOID).collect(Collectors.toList());
+    }
     public void processFile(String filename) throws Exception {
         ProcessFile fileProcess=new ProcessFile();
         fileProcess.indexFromFile(filename);
@@ -146,6 +155,7 @@ public class Main {
         ProcessFile fileProcess=new ProcessFile();
         fileProcess.parseFileFields(filename,sheet);
     }
+
     public List<String> parseNCTIds(String filename) throws Exception {
         return fileProcess.parseFileForNCTIds(filename);
     }

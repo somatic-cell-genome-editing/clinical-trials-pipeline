@@ -47,6 +47,8 @@ public class ProcessFile {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     Gson gson=new Gson();
     ObjectMapper mapper=new ObjectMapper();
+
+
     public void parseFileFields(String file, String sheetName) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
@@ -524,7 +526,14 @@ public class ProcessFile {
             if(externalLinks!=null && externalLinks.size()>0)
               trial.setExternalLinks(externalLinks);
             ClinicalTrialIndexObject object=mapper.readValue(gson.toJson(trial), ClinicalTrialIndexObject.class);
-
+            List<Alias> aliases=clinicalTrailDAO.getAliases(trial.getNctId(),"compound");
+            if(aliases!=null && aliases.size()>0){
+                object.setAliases(aliases.stream().map(Alias::getAlias).collect(Collectors.toSet()));
+            }
+            List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(trial.getNctId(),"fda_designation");
+            if(additionalInfo!=null && additionalInfo.size()>0){
+                object.setFdaDesignations(additionalInfo.stream().map(ClinicalTrialAdditionalInfo::getPropertyValue).collect(Collectors.toSet()));
+            }
           if(trial.getPhase()!=null)
           object.setPhases(Arrays.stream(trial.getPhase().split(",")).map(String::trim).collect(Collectors.toSet()));
             if(trial.getStandardAge()!=null)
@@ -621,11 +630,6 @@ public class ProcessFile {
     }
     public void updateClinicalTrailRecord(ClinicalTrialIndexObject record) throws Exception {
 
-//        JSONObject jsonObject = new JSONObject(record);
-//        IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
-//        ESClient.getClient().index(request, RequestOptions.DEFAULT);
-//        RefreshRequest refreshRequest = new RefreshRequest();
-//        ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
         IndexAdmin indexAdmin=new IndexAdmin();
         indexAdmin.updateIndex(SCGEContext.getESIndexName());
         if(BulkIndexProcessor.bulkProcessor==null){
