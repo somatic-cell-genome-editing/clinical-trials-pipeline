@@ -2,14 +2,14 @@ package edu.mcw.scge.platform.index;
 
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
+
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.gson.Gson;
 import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
+import edu.mcw.scge.dao.implementation.DefinitionDAO;
 import edu.mcw.scge.datamodel.Alias;
 import edu.mcw.scge.datamodel.ClinicalTrialAdditionalInfo;
 import edu.mcw.scge.datamodel.ClinicalTrialExternalLink;
@@ -30,7 +30,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.common.recycler.Recycler;
+
 import org.elasticsearch.xcontent.XContentType;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -47,6 +47,7 @@ public class ProcessFile {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     Gson gson=new Gson();
     ObjectMapper mapper=new ObjectMapper();
+    DefinitionDAO definitionDAO=new DefinitionDAO();
 
 
     public void parseFileFields(String file, String sheetName) throws Exception {
@@ -530,6 +531,11 @@ public class ProcessFile {
             if(aliases!=null && aliases.size()>0){
                 object.setAliases(aliases.stream().map(Alias::getAlias).collect(Collectors.toSet()));
             }
+            Set<String> tags = new HashSet<>(getAbbreviationTags(trial.getNctId(), "fda_designation"));
+            if(trial.getIndicationDOID()!=null) {
+                tags.addAll(getOntologyTags(trial.getNctId(), trial.getIndicationDOID(), "indication_ont_parent_term"));
+            }
+            object.setTags(tags);
             List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(trial.getNctId(),"fda_designation");
             if(additionalInfo!=null && additionalInfo.size()>0){
                 object.setFdaDesignations(additionalInfo.stream().map(ClinicalTrialAdditionalInfo::getPropertyValue).collect(Collectors.toSet()));
@@ -545,6 +551,29 @@ public class ProcessFile {
             object.setCategory("ClinicalTrial");
           indexClinicalTrailRecord(object);
         }
+    }
+    public Set<String> getAbbreviationTags(String nctId,String tagType) throws Exception {
+        List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(nctId,tagType);
+
+        Set<String> tags=new HashSet<>();
+        for(ClinicalTrialAdditionalInfo info:additionalInfo){
+            List<String> defs=definitionDAO.getAbbreviation(info.getPropertyValue());
+            if(defs!=null && defs.size()>0){
+                tags.addAll(new HashSet<>(defs));
+
+            }
+        }
+        return tags;
+    }
+    public Set<String> getOntologyTags(String nctId,String indicationDOID, String tagType) throws Exception {
+        List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(nctId,tagType);
+
+        Set<String> tags=new HashSet<>();
+        tags.add(indicationDOID);
+        for(ClinicalTrialAdditionalInfo info:additionalInfo){
+            tags.add(info.getPropertyValue());
+        }
+        return tags;
     }
     public void formatRecordValue(ClinicalTrialRecord record){
         try {
@@ -620,7 +649,6 @@ public class ProcessFile {
         return  Arrays.stream(fieldVal.split(",")).map(str->StringUtils.capitalize(str.toLowerCase().trim().replaceAll("_", " "))).collect(Collectors.joining(", "));
     }
     public void indexClinicalTrailRecord(ClinicalTrialIndexObject record) throws IOException {
-
         JSONObject jsonObject = new JSONObject(record);
         IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
         ESClient.getClient().index(request, RequestOptions.DEFAULT);

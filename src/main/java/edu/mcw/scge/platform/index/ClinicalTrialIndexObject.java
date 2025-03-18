@@ -14,7 +14,16 @@ public class ClinicalTrialIndexObject extends ClinicalTrialRecord {
     private Set<String> locations;
     private Set<String> aliases;
     private Set<String> fdaDesignations;
+    private Set<String> tags;
     private String category;
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
+    }
 
     public Set<String> getAliases() {
         return aliases;

@@ -50,7 +50,6 @@ public class Main {
         manager.env=args[1];
         manager.source=args[2];
 
-     //   String index="scge_platform_search";
       String index="scgeplatform_search_ct_"+manager.env;
       //  String index= SCGEContext.getESIndexName();
         List<String> indices= new ArrayList<>();
@@ -79,7 +78,9 @@ public class Main {
 
     public void run() throws Exception {
         long start = System.currentTimeMillis();
-        String fileName="data/GT_tracker_release2_WIP.xlsx";
+     //   String fileName="data/GT_tracker_release2_WIP.xlsx";
+        String fileName=System.getenv("FILE_NAME");
+        System.out.println("FILE NAME:"+ fileName);
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("", "");
         switch (source) {

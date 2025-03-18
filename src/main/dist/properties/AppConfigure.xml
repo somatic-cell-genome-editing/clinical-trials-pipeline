@@ -19,5 +19,5 @@
         <property name="index" ref="index"/>
     </bean>
 
-    <bean id="client" class="edu.mcw.scge.services.es.ESClient" init-method="init" destroy-method="destroy"/>
+    <bean id="client" class="edu.mcw.scge.services.ESClient" init-method="init" destroy-method="destroy"/>
 </beans>
