@@ -82,7 +82,7 @@ public class Main {
         String fileName=System.getenv("FILE_NAME");
         System.out.println("FILE NAME:"+ fileName);
         if (command.equalsIgnoreCase("reindex"))
-           admin.createIndex("", "");
+           admin.createIndex("clinicalTrialMappings", "");
         switch (source) {
             case "api" :
                 /* download all data from clinical trails API and load to database. */

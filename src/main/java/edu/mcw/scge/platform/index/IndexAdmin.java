@@ -18,6 +18,8 @@ import org.elasticsearch.xcontent.XContentType;
 
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Date;
 
 public class IndexAdmin {
@@ -62,10 +64,10 @@ public class IndexAdmin {
     }
         public void createNewIndex(String index, String _mappings, String type) throws Exception {
 
-         //   String path= "data/indexDocMappings.json";
+            String path= "data/"+_mappings+".json";
             System.out.println("CREATING NEW INDEX..." + index);
 
-          //  String mappings=new String(Files.readAllBytes(Paths.get(path)));
+            String mappings=new String(Files.readAllBytes(Paths.get(path)));
          //   String analyzers=new String(Files.readAllBytes(Paths.get("data/analyzers.json")));
             int replicates=0;
             if(!index.contains("dev")){
@@ -78,8 +80,7 @@ public class IndexAdmin {
                     .put("index.number_of_replicas", replicates))
                //     .loadFromSource(analyzers, XContentType.JSON))
             ;
-//            request.mapping(mappings,
-//                    XContentType.JSON);
+            request.mapping(mappings, XContentType.JSON);
             org.elasticsearch.client.indices.CreateIndexResponse createIndexResponse = ESClient.getClient().indices().create(request, RequestOptions.DEFAULT);
             System.out.println(index + " created on  " + new Date());
 

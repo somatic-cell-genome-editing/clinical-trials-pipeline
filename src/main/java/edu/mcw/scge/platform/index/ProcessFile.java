@@ -542,6 +542,9 @@ public class ProcessFile {
             }
           if(trial.getPhase()!=null)
           object.setPhases(Arrays.stream(trial.getPhase().split(",")).map(String::trim).collect(Collectors.toSet()));
+            if(trial.getIndication()!=null)
+                object.setIndications(Arrays.stream(trial.getIndication().split(",")).map(String::trim).collect(Collectors.toSet()));
+
             if(trial.getStandardAge()!=null)
           object.setStandardAges(Arrays.stream(trial.getStandardAge().split(",")).map(String::trim).collect(Collectors.toSet()));
             if(trial.getStudyStatus()!=null)
@@ -549,9 +552,101 @@ public class ProcessFile {
             if(trial.getLocation()!=null)
             object.setLocations(Arrays.stream(trial.getLocation().split(",")).map(String::trim).collect(Collectors.toSet()));
             object.setCategory("ClinicalTrial");
+            addSuggestTerms(object);
           indexClinicalTrailRecord(object);
         }
     }
+    public void addSuggestTerms(ClinicalTrialIndexObject object){
+        Set<String> suggestTerms=new HashSet<>();
+        try {
+            if(object.getPhases()!=null)
+            suggestTerms.addAll(object.getPhases().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}
+        try{
+            if(object.getAliases()!=null)
+            suggestTerms.addAll(object.getAliases());
+        }catch (Exception ignored){}try{
+            if(object.getFdaDesignations()!=null)
+            suggestTerms.addAll(object.getFdaDesignations().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getLocations()!=null)
+            suggestTerms.addAll(object.getLocations().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getTags()!=null) {
+                for(String tag:object.getTags()) {
+                    if(!tag.contains("DOID"))
+                    suggestTerms.add(StringUtils.capitalize(tag.toLowerCase().trim()));
+                    else  suggestTerms.add(tag);
+                }
+            }
+        }catch (Exception ignored){}try{
+            if(object.getStandardAges()!=null)
+            suggestTerms.addAll(object.getStandardAges().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getBrowseConditionTerms()!=null){
+                String[] browseConditionTerms=object.getBrowseConditionTerms().split("[,;]");
+                suggestTerms.addAll(Arrays.stream(browseConditionTerms).map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+            }
+        }catch (Exception ignored){}try{
+            if(object.getStatus()!=null)
+            suggestTerms.addAll(object.getStatus().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getCompoundName()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getCompoundName().trim().toLowerCase()));
+        }catch (Exception ignored){}try{
+            if(object.getEditorType()!=null)
+            suggestTerms.add(object.getEditorType());
+        }catch (Exception ignored){}try{
+            if(object.getDeliverySystem()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getDeliverySystem().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getInterventionName()!=null)
+            suggestTerms.add(object.getInterventionName());
+        }catch (Exception ignored){}try{
+            if(object.getTherapyRoute()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getTherapyRoute().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getTherapyType()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getTherapyType().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getVectorType()!=null)
+            suggestTerms.add(object.getVectorType());
+        }catch (Exception ignored){}try{
+            if(object.getDrugProductType()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getDrugProductType().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getDevelopmentStatus()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getDevelopmentStatus().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getEligibilitySex()!=null && !object.getEligibilitySex().equalsIgnoreCase("all"))
+            suggestTerms.add(object.getEligibilitySex());
+        }catch (Exception ignored){}try{
+            if(object.getIndications()!=null)
+            suggestTerms.addAll(object.getIndications().stream().map(i->StringUtils.capitalize(i.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getMechanismOfAction()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getMechanismOfAction().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getRouteOfAdministration()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getRouteOfAdministration().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getSponsor()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getSponsor().trim().toLowerCase()));
+        }catch (Exception ignored){}try{
+            if(object.getTargetGeneOrVariant()!=null)
+            suggestTerms.add(object.getTargetGeneOrVariant());
+        }catch (Exception ignored){}try{
+            if(object.getTargetTissueOrCell()!=null)
+            suggestTerms.add(object.getTargetTissueOrCell());
+        }catch (Exception ignored){}
+        Map<String, Set<String>> suggestions=new HashMap<>();
+        System.out.println("SUGGEST TERMS SIZE:"+suggestTerms.size());
+        if(suggestTerms.size()>0) {
+            suggestions.put("input", suggestTerms.stream().map(String::trim).collect(Collectors.toSet()));
+            object.setSuggest(suggestions);
+        }
+    }
+
     public Set<String> getAbbreviationTags(String nctId,String tagType) throws Exception {
         List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(nctId,tagType);
 
