@@ -1,29 +1,33 @@
 package edu.mcw.scge.platform;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
 import edu.mcw.scge.platform.index.Index;
 import edu.mcw.scge.platform.index.IndexAdmin;
 import edu.mcw.scge.platform.index.ProcessFile;
-import edu.mcw.scge.platform.model.*;
+;
 
 
 import edu.mcw.scge.platform.utils.OntologyProcessor;
 import edu.mcw.scge.process.Utils;
 import edu.mcw.scge.services.ESClient;
-import edu.mcw.scge.services.SCGEContext;
+
+import org.apache.logging.log4j.LogManager;
+
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.RequestOptions;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
+
+
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+
 
 import java.io.IOException;
 
@@ -42,14 +46,16 @@ public class Main {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     ProcessFile fileProcess=new ProcessFile();
     OntologyProcessor ontologyProcessor=new OntologyProcessor();
+    protected static Logger logger= LogManager.getLogger();
     public static void main(String[] args) throws IOException {
+
         DefaultListableBeanFactory bf= new DefaultListableBeanFactory();
         new XmlBeanDefinitionReader(bf) .loadBeanDefinitions(new FileSystemResource("properties/AppConfigure.xml"));
         Main manager= (Main) bf.getBean("manager");
         manager.command=args[0];
         manager.env=args[1];
         manager.source=args[2];
-
+        logger.info(manager.version);
       String index="scgeplatform_search_ct_"+manager.env;
       //  String index= SCGEContext.getESIndexName();
         List<String> indices= new ArrayList<>();
@@ -73,14 +79,14 @@ public class Main {
             e.printStackTrace();
         }
             ESClient.destroy();
-        System.out.println(manager.version);
+
     }
 
     public void run() throws Exception {
         long start = System.currentTimeMillis();
      //   String fileName="data/GT_tracker_release2_WIP.xlsx";
         String fileName=System.getenv("FILE_NAME");
-        System.out.println("FILE NAME:"+ fileName);
+        logger.info("FILE NAME:"+ fileName);
         if (command.equalsIgnoreCase("reindex"))
            admin.createIndex("clinicalTrialMappings", "");
         switch (source) {
@@ -95,7 +101,7 @@ public class Main {
             case "file1" :
                 /*read NCTIDS from Excel sheet */
                 List<String> nctIds= parseNCTIds(fileName);
-                System.out.println("NCTIDS:"+ nctIds);
+                logger.info("NCTIDS:"+ nctIds);
                 /* Query clinical trials API and load API results to database*/
                 queryApiNUploadToDB(nctIds);
                 /* read from Excel sheet and upload curated fields to DB  */
@@ -129,16 +135,16 @@ public class Main {
 
         String clusterStatus = this.getClusterHealth(Index.getNewAlias());
         if (!clusterStatus.equalsIgnoreCase("ok")) {
-            System.out.println(clusterStatus + ", refusing to continue with operations");
+            logger.info(clusterStatus + ", refusing to continue with operations");
         } else {
             if (command.equalsIgnoreCase("reindex")) {
-                System.out.println("CLUSTER STATUR:" + clusterStatus + ". Switching Alias...");
+                logger.info("CLUSTER STATUR:" + clusterStatus + ". Switching Alias...");
                 switchAlias();
             }
         }
         long end = System.currentTimeMillis();
-        System.out.println(" - " + Utils.formatElapsedTime(start, end));
-        System.out.println("CLIENT IS CLOSED");
+        logger.info(" - " + Utils.formatElapsedTime(start, end));
+        logger.info("CLIENT IS CLOSED");
     }
     public List<String> getIndicationDOIDs() throws Exception {
         List<ClinicalTrialRecord> records=clinicalTrailDAO.getAllClinicalTrailRecords();
@@ -162,7 +168,7 @@ public class Main {
     }
     public void queryApiNUploadToDB(List<String> nctIds) throws Exception {
         clinicalTrailDAO.downloadClinicalTrails(nctIds);
-        System.out.println("Download from API and Upload to DB is DONE!!");
+        logger.info("Download from API and Upload to DB is DONE!!");
     }
 
     public boolean existsRecord(String nctId) throws Exception {
@@ -264,7 +270,7 @@ public class Main {
 
         ClusterHealthRequest request = new ClusterHealthRequest(index);
         ClusterHealthResponse response = ESClient.getClient().cluster().health(request, RequestOptions.DEFAULT);
-        System.out.println(response.getStatus().name());
+        logger.info("CLUSTER STATE: " +response.getStatus().name());
         //     log.info("CLUSTER STATE: " + response.getStatus().name());
         if (response.isTimedOut()) {
             return   "cluster state is " + response.getStatus().name();
@@ -273,7 +279,7 @@ public class Main {
         return "OK";
     }
     public boolean switchAlias() throws Exception {
-        System.out.println("NEEW ALIAS: " + Index.getNewAlias() + " || OLD ALIAS:" + Index.getOldAlias());
+        logger.info("NEEW ALIAS: " + Index.getNewAlias() + " || OLD ALIAS:" + Index.getOldAlias());
         IndicesAliasesRequest request = new IndicesAliasesRequest();
 
 
@@ -313,5 +319,9 @@ public class Main {
 
     public List getEnvironments() {
         return environments;
+    }
+
+    public String getVersion() {
+        return version;
     }
 }

@@ -49,9 +49,16 @@ dependencies {
     implementation group: 'org.springframework', name: 'spring-jdbc', version: '5.1.9.RELEASE'
 // https://mvnrepository.com/artifact/org.springframework/spring-core
     implementation group: 'org.springframework', name: 'spring-core', version: '5.1.9.RELEASE'
-    implementation group: 'commons-logging', name: 'commons-logging', version: '1.2'
+//    implementation group: 'commons-logging', name: 'commons-logging', version: '1.2'
     implementation group: 'commons-lang', name: 'commons-lang', version: '2.6'
-    implementation 'log4j:log4j:1.2.17'
+//    implementation 'log4j:log4j:1.2.17'
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation("org.slf4j:slf4j-api:1.7.36")
+ //   implementation("ch.qos.logback:logback-classic:1.2.13")
+    implementation 'org.apache.logging.log4j:log4j-api:2.20.0'
+    implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.20.0'
 // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.17.0'
 // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
