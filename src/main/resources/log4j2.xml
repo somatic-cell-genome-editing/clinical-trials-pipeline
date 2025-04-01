@@ -37,13 +37,7 @@
             <Column name="message" pattern="%msg" isUnicode="false"/>
             <Column name="thread_name" pattern="%thread" isUnicode="false"/>
             <Column name="exception" pattern="%exception" isUnicode="false"/>
-            <!-- SQL Query to insert log events -->
-            <SQL>
-                <![CDATA[
-                    INSERT INTO clinical_trial_log_events (timestamp, level, logger_name, message, thread_name, exception)
-                    VALUES (:timestamp, :level, :logger_name, :message, :thread_name, :exception)
-                ]]>
-            </SQL>
+
         </JDBC>
 
     </Appenders>
