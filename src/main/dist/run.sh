@@ -10,7 +10,7 @@ fi
 cd $APPDIR
 pwd
 DB_OPTS="-Dspring.config=/data/pipelines/properties/default_db.xml"
-LOG4J_OPTS="-Dlog4j.configuration=file://$APPDIR/properties/log4j.properties"
+LOG4J_OPTS="-Dlog4j.configuration=file://$APPDIR/properties/log4j2.properties"
 export  CLINICAL_TRIALS_PIPELINE_OPTS="$DB_OPTS $LOG4J_OPTS"
 bin/$APPNAME "$@" | tee run.log
 mailx -s "[$SERVER] Gene Therapy Clinical trials Indexing Pipeline OK" $EMAIL_LIST < run.log
