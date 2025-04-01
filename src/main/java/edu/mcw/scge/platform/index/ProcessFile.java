@@ -640,7 +640,6 @@ public class ProcessFile {
             suggestTerms.add(object.getTargetTissueOrCell());
         }catch (Exception ignored){}
         Map<String, Set<String>> suggestions=new HashMap<>();
-        System.out.println("SUGGEST TERMS SIZE:"+suggestTerms.size());
         if(suggestTerms.size()>0) {
             suggestions.put("input", suggestTerms.stream().map(String::trim).collect(Collectors.toSet()));
             object.setSuggest(suggestions);
