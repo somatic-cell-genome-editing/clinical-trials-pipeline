@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import edu.mcw.scge.services.ESClient;
+import edu.mcw.scge.services.SCGEContext;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
@@ -70,7 +71,8 @@ public class IndexAdmin {
             String mappings=new String(Files.readAllBytes(Paths.get(path)));
          //   String analyzers=new String(Files.readAllBytes(Paths.get("data/analyzers.json")));
             int replicates=0;
-            if(!index.contains("dev")){
+
+                if(SCGEContext.isProduction() || SCGEContext.isTest()){
                 replicates=1;
             }
             /********* create index, put mappings and analyzers ****/

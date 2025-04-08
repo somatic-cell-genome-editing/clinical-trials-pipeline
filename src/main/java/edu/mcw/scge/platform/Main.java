@@ -115,7 +115,7 @@ public class Main {
                 break;
             case "update-and-index-db" :
                 List<ClinicalTrialRecord> trials= clinicalTrailDAO.getAllClinicalTrailRecords();
-                List<String> nctIdsFromDB= trials.stream().map(t->t.getNctId()).collect(Collectors.toList());
+                List<String> nctIdsFromDB= trials.stream().map(ClinicalTrialRecord::getNctId).collect(Collectors.toList());
                 /* Query clinical trials API and load API results to database*/
                 queryApiNUploadToDB(nctIdsFromDB);
                 /* read from Excel sheet and upload curated fields to DB  */
