@@ -29,11 +29,11 @@ public class OntologyProcessor {
                 try {
                     String response = restTemplate.getForObject(fetchURI, String.class);
                     if (response != null && response.length() > 2) {
-                        Map<String, String> idMap = mapper.readValue(response, Map.class);
+                       List synonyms = mapper.readValue(response, List.class);
 //                        System.out.println("ID MAP:" + gson.toJson(idMap));
-                        for(String key:idMap.keySet()){
-                            uploadInfoObject(key, record.getNctId());
-                            uploadInfoObject(idMap.get(key).toString(), record.getNctId());
+                        for(Object synonym:synonyms){
+                            uploadInfoObject(synonym.toString(), record.getNctId());
+
                         }
                     }
                 }catch (Exception e){
