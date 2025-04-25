@@ -26,7 +26,12 @@ public class OntologyProcessor {
         for (ClinicalTrialRecord record : records) {
             String ontId=record.getIndicationDOID();
             if (ontId != null && !ontId.equals("")) {
-                int id=Integer.parseInt(ontId);
+                int id=0;
+                try{
+                  id=  Integer.parseInt(ontId);
+                }catch (Exception e){
+                    System.out.println("ERROR DOID:"+ id);
+                }
                 if(id>0) {
                     String fetchURI = baseURI + "DOID:" + ontId;
                     try {
