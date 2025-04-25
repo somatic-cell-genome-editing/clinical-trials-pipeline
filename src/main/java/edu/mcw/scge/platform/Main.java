@@ -129,6 +129,7 @@ public class Main {
                 break;
             case "update-ontology-terms" :
                 ontologyProcessor.uploadParentTerms();
+                fileProcess.indexClinicalTrials();
                 break;
             default :
         }
