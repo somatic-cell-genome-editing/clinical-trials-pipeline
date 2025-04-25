@@ -22,7 +22,7 @@ public class OntologyProcessor {
     public Logger logger = LogManager.getLogger("ontology");
     public void uploadParentTerms() throws Exception {
         List<ClinicalTrialRecord> records = clinicalTrailDAO.getAllClinicalTrailRecords();
-        String baseURI = "https://rest.rgd.mcw.edu/rgdws/ontology/termAndParentTermWithSynonyms/";
+        String baseURI = "https://pipelines.rgd.mcw.edu/rgdws/ontology/termAndParentTermWithSynonyms/";
         RestTemplate restTemplate=new RestTemplate();
         restTemplate.setErrorHandler(new ApiResponseErrorHandler());
         for (ClinicalTrialRecord record : records) {
