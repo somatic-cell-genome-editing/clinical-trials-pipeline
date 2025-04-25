@@ -30,7 +30,7 @@ public class OntologyProcessor {
                 try{
                   id=  Integer.parseInt(ontId);
                 }catch (Exception e){
-                    System.out.println("ERROR DOID:"+ id);
+                    System.out.println("ERROR DOID:"+ ontId);
                 }
                 if(id>0) {
                     String fetchURI = baseURI + "DOID:" + ontId;
