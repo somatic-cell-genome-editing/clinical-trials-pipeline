@@ -19,7 +19,7 @@ public class OntologyProcessor {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     public void uploadParentTerms() throws Exception {
         List<ClinicalTrialRecord> records = clinicalTrailDAO.getAllClinicalTrailRecords();
-        String baseURI = "https://dev.rgd.mcw.edu/rgdws/ontology/parentTerms/";
+        String baseURI = "https://rest.rgd.mcw.edu/rgdws/ontology/termAndParentTermWithSynonyms/";
         RestTemplate restTemplate=new RestTemplate();
         ObjectMapper mapper = new ObjectMapper();
         for (ClinicalTrialRecord record : records) {
@@ -28,7 +28,7 @@ public class OntologyProcessor {
                 String fetchURI = baseURI +"DOID:"+ontId;
                 try {
                     String response = restTemplate.getForObject(fetchURI, String.class);
-                    if (response != null && !response.isEmpty() && response.length() > 2) {
+                    if (response != null && response.length() > 2) {
                         Map<String, String> idMap = mapper.readValue(response, Map.class);
 //                        System.out.println("ID MAP:" + gson.toJson(idMap));
                         for(String key:idMap.keySet()){
