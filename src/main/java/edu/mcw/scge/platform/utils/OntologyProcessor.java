@@ -21,21 +21,28 @@ public class OntologyProcessor {
         List<ClinicalTrialRecord> records = clinicalTrailDAO.getAllClinicalTrailRecords();
         String baseURI = "https://rest.rgd.mcw.edu/rgdws/ontology/termAndParentTermWithSynonyms/";
         RestTemplate restTemplate=new RestTemplate();
+        restTemplate.setErrorHandler(new ApiResponseErrorHandler());
         ObjectMapper mapper = new ObjectMapper();
         for (ClinicalTrialRecord record : records) {
             String ontId=record.getIndicationDOID();
             if (ontId != null) {
                 String fetchURI = baseURI +"DOID:"+ontId;
                 try {
-                    String response = restTemplate.getForObject(fetchURI, String.class);
-                    if (response != null && response.length() > 2) {
-                       List synonyms = mapper.readValue(response, List.class);
-//                        System.out.println("ID MAP:" + gson.toJson(idMap));
-                        for(Object synonym:synonyms){
+                    List response = restTemplate.getForObject(fetchURI, List.class);
+//                    System.out.println("res"+ response);
+                    if (response != null && response.size() > 0) {
+                        for (Object synonym : response) {
                             uploadInfoObject(synonym.toString(), record.getNctId());
-
                         }
                     }
+//                    if (response != null && response.length() > 2) {
+//                       List synonyms = mapper.readValue(response, List.class);
+////                        System.out.println("ID MAP:" + gson.toJson(idMap));
+//                        for(Object synonym:synonyms){
+//                            uploadInfoObject(synonym.toString(), record.getNctId());
+//
+//                        }
+//                    }
                 }catch (Exception e){
                     e.printStackTrace();
                 }
