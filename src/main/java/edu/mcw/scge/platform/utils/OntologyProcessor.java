@@ -25,16 +25,19 @@ public class OntologyProcessor {
         ObjectMapper mapper = new ObjectMapper();
         for (ClinicalTrialRecord record : records) {
             String ontId=record.getIndicationDOID();
-            if (ontId != null) {
-                String fetchURI = baseURI +"DOID:"+ontId;
-                try {
-                    List response = restTemplate.getForObject(fetchURI, List.class);
+            if (ontId != null && !ontId.equals("")) {
+                int id=Integer.parseInt(ontId);
+                if(id>0) {
+                    String fetchURI = baseURI + "DOID:" + ontId;
+                    try {
+                        List response = restTemplate.getForObject(fetchURI, List.class);
 //                    System.out.println("res"+ response);
-                    if (response != null && response.size() > 0) {
-                        for (Object synonym : response) {
-                            uploadInfoObject(synonym.toString(), record.getNctId());
+                        if (response != null && response.size() > 0) {
+                            for (Object synonym : response) {
+                                uploadInfoObject(synonym.toString(), record.getNctId());
+                            }
                         }
-                    }
+
 //                    if (response != null && response.length() > 2) {
 //                       List synonyms = mapper.readValue(response, List.class);
 ////                        System.out.println("ID MAP:" + gson.toJson(idMap));
@@ -43,10 +46,10 @@ public class OntologyProcessor {
 //
 //                        }
 //                    }
-                }catch (Exception e){
-                    e.printStackTrace();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
-
             }
         }
 
