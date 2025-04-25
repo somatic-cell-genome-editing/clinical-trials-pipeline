@@ -10,6 +10,9 @@
         <File name="File" fileName="logs/root.log">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level: %msg%n%throwable"/>
         </File>
+        <File name="OntologyFile" fileName="logs/ontology.log">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level: %msg%n%throwable"/>
+        </File>
 
         <!-- RollingFile Appender: Rolls over based on time -->
         <RollingFile name="RollingFile" fileName="logs/clinicalTrials.log" filePattern="logs/app-%d{yyyy-MM-dd}-%i.log">
@@ -54,6 +57,11 @@
             <AppenderRef ref="Console"/>
             <AppenderRef ref="RollingFile"/>
             <AppenderRef ref="DatabaseAppender"/>
+        </Logger>
+        <Logger name="ontology" level="info" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="OntologyFile"/>
+
         </Logger>
     </Loggers>
 </Configuration>
