@@ -2,16 +2,19 @@ package edu.mcw.scge.platform.index;
 
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
+
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.gson.Gson;
 import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
+import edu.mcw.scge.dao.implementation.DefinitionDAO;
+import edu.mcw.scge.datamodel.Alias;
+import edu.mcw.scge.datamodel.ClinicalTrialAdditionalInfo;
 import edu.mcw.scge.datamodel.ClinicalTrialExternalLink;
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
+import edu.mcw.scge.platform.model.platform.AliasType;
 import edu.mcw.scge.platform.utils.BulkIndexProcessor;
 import edu.mcw.scge.services.ESClient;
 import edu.mcw.scge.services.SCGEContext;
@@ -27,6 +30,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.RequestOptions;
+
 import org.elasticsearch.xcontent.XContentType;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,6 +47,160 @@ public class ProcessFile {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     Gson gson=new Gson();
     ObjectMapper mapper=new ObjectMapper();
+    DefinitionDAO definitionDAO=new DefinitionDAO();
+
+
+    public void parseFileFields(String file, String sheetName) throws Exception {
+        FileInputStream fs=new FileInputStream(new File(file));
+        XSSFWorkbook workbook=new XSSFWorkbook(fs);
+        XSSFSheet sheet=workbook.getSheet(sheetName);
+        if(sheet==null){
+            throw new Exception("Sheet is null");
+        }
+        ObjectMapper mapper=JsonMapper.builder().
+                enable( JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER).build();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+
+          for (Row row : sheet) {
+
+            if (row.getRowNum() >4) {
+                String NCTNumber= String.valueOf(row.getCell(0));
+                Iterator<Cell> cellIterator=row.cellIterator();
+                if( NCTNumber==null || NCTNumber.trim().isEmpty() || NCTNumber.equals("null") || NCTNumber.equals("")){
+                    continue;
+                }
+                ClinicalTrialRecord record=new ClinicalTrialRecord();
+                List<ClinicalTrialExternalLink> externalLinks=new ArrayList<>();
+                List<Alias> aliases=new ArrayList<>();
+                List<ClinicalTrialAdditionalInfo> info=new ArrayList<>();
+                while (cellIterator.hasNext()) {
+
+                    Cell cell = cellIterator.next();
+                    int colIndex = cell.getColumnIndex();
+
+                    if(colIndex==0) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String     columnVal = String.valueOf(row.getCell(colIndex));
+                            record.setNctId(columnVal);
+                        }
+                    }
+                    if(colIndex==1) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String  columnVal = String.valueOf(row.getCell(colIndex));
+                            record.setDevelopmentStatus(columnVal);
+                        }
+                    }
+                    if(colIndex==4) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String  columnVal = String.valueOf(row.getCell(colIndex));
+
+                            record.setIndicationDOID(columnVal.replace(".0",""));
+                        }
+                    }
+                    if(colIndex==6) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String   columnVal = String.valueOf(row.getCell(colIndex));
+                            String[] fdaDesignations=columnVal.split(",");
+                            for(String fdaDesignation:fdaDesignations) {
+                                ClinicalTrialAdditionalInfo i = new ClinicalTrialAdditionalInfo();
+                                i.setNctId(NCTNumber.trim());
+                                i.setPropertyName("fda_designation");
+                                i.setPropertyValue(fdaDesignation.trim());
+                                info.add(i);
+                                // record.setFdaDesignation(columnVal);
+                            }
+                        }
+                    }
+                    if(colIndex==2) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String    columnVal = String.valueOf(row.getCell(colIndex));
+                            String[] relatedIds = columnVal.split(";");
+                            for(String id:relatedIds){
+                                ClinicalTrialExternalLink link= new ClinicalTrialExternalLink();
+                                link.setType("Related NCTID");
+                                link.setName(id);
+                                link.setLink("https://www.clinicaltrials.gov/study/"+id);
+                                link.setNctId(NCTNumber);
+                                externalLinks.add(link);
+
+                            }
+                        }
+                    }
+
+                    if(colIndex==7) {
+                        if (row.getCell(colIndex) != null && !row.getCell(colIndex).toString().isEmpty()) {
+                            String   columnVal = String.valueOf(row.getCell(colIndex));
+                            String compoundName=null;
+                            if(columnVal.contains("(")) {
+                                String compoundDescription = columnVal.substring(columnVal.indexOf("(") + 1, columnVal.indexOf(")"));
+                                record.setCompoundDescription(compoundDescription);
+                                 compoundName=columnVal.substring(0,columnVal.indexOf("("));
+
+                            }else{
+                                compoundName=columnVal;
+                            }
+                            String[] names=compoundName.split("/");
+                            record.setCompoundName(names[0]);
+                            System.out.println("COMPOUN NAME RECORD VAL:"+ record.getCompoundName());
+                            if(names.length>1) {
+
+
+                                for (int i = 1; i <names.length; i++) {
+                                    Alias alias=new Alias();
+                                    alias.setIdentifier(NCTNumber);
+                                    alias.setAlias(names[i]);
+                                    alias.setAliasTypeLC(AliasType.getTypeByCode(i).getDescription());
+                                    alias.setFieldName("compound");
+                                    aliases.add((alias));
+                                }
+                            }
+                        }
+                    }
+
+                }
+
+                try {
+                    if(record.getNctId()!=null) {
+                        System.out.println("ROW " + row.getRowNum() + "\t" + gson.toJson(record));
+                        clinicalTrailDAO.updateSomeNewFieldsDataFields(record);
+
+                    }
+                }catch (Exception e){
+                    System.out.println(record.getNctId());
+                    e.printStackTrace();
+                }
+                try {
+                    for(ClinicalTrialExternalLink xLink:externalLinks){
+                        if(!clinicalTrailDAO.existsExternalLink(xLink)) {
+                            int id=clinicalTrailDAO.getNextKey("clinical_trial_ext_links_seq");
+                            xLink.setId(id);
+                            clinicalTrailDAO.insertExternalLink(xLink);
+                        }
+                    }
+                }catch (Exception e){
+                }
+                try {
+                    for(Alias alias:aliases){
+                        if(!clinicalTrailDAO.existsAlias(alias))
+                        clinicalTrailDAO.insertAlias(alias);
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+                try {
+                    for(ClinicalTrialAdditionalInfo additionalInfo:info){
+                        if(!clinicalTrailDAO.existsInfo(additionalInfo))
+                            clinicalTrailDAO.insertAdditionalInfo(additionalInfo);
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+        }
+
+        fs.close();
+    }
     public void parseFileAndMapDB(String file, String sheetName) throws Exception {
         FileInputStream fs=new FileInputStream(new File(file));
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
@@ -312,14 +470,14 @@ public class ProcessFile {
         FileInputStream fs=new FileInputStream(new File(file));
 
         XSSFWorkbook workbook=new XSSFWorkbook(fs);
-        XSSFSheet sheet=workbook.getSheet("all data");
+        XSSFSheet sheet=workbook.getSheet("updated on STAGE");
         if(sheet==null){
             return null;
         }
         List<String> nctIds=new ArrayList<>();
         int i=0;
         for (Row row : sheet) {
-            if (row.getRowNum() > 12){
+            if (row.getRowNum() > 4){
                 String NCTNumber = String.valueOf(row.getCell(0));
                 nctIds.add(NCTNumber);
             i++;
@@ -369,9 +527,24 @@ public class ProcessFile {
             if(externalLinks!=null && externalLinks.size()>0)
               trial.setExternalLinks(externalLinks);
             ClinicalTrialIndexObject object=mapper.readValue(gson.toJson(trial), ClinicalTrialIndexObject.class);
-
+            List<Alias> aliases=clinicalTrailDAO.getAliases(trial.getNctId(),"compound");
+            if(aliases!=null && aliases.size()>0){
+                object.setAliases(aliases.stream().map(Alias::getAlias).collect(Collectors.toSet()));
+            }
+            Set<String> tags = new HashSet<>(getAbbreviationTags(trial.getNctId(), "fda_designation"));
+            if(trial.getIndicationDOID()!=null) {
+                tags.addAll(getOntologyTags(trial.getNctId(), trial.getIndicationDOID(), "indication_ont_parent_term"));
+            }
+            object.setTags(tags);
+            List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(trial.getNctId(),"fda_designation");
+            if(additionalInfo!=null && additionalInfo.size()>0){
+                object.setFdaDesignations(additionalInfo.stream().map(ClinicalTrialAdditionalInfo::getPropertyValue).collect(Collectors.toSet()));
+            }
           if(trial.getPhase()!=null)
           object.setPhases(Arrays.stream(trial.getPhase().split(",")).map(String::trim).collect(Collectors.toSet()));
+            if(trial.getIndication()!=null)
+                object.setIndications(Arrays.stream(trial.getIndication().split(",")).map(String::trim).collect(Collectors.toSet()));
+
             if(trial.getStandardAge()!=null)
           object.setStandardAges(Arrays.stream(trial.getStandardAge().split(",")).map(String::trim).collect(Collectors.toSet()));
             if(trial.getStudyStatus()!=null)
@@ -379,8 +552,122 @@ public class ProcessFile {
             if(trial.getLocation()!=null)
             object.setLocations(Arrays.stream(trial.getLocation().split(",")).map(String::trim).collect(Collectors.toSet()));
             object.setCategory("ClinicalTrial");
+            addSuggestTerms(object);
           indexClinicalTrailRecord(object);
         }
+    }
+    public void addSuggestTerms(ClinicalTrialIndexObject object){
+        Set<String> suggestTerms=new HashSet<>();
+        try {
+            if(object.getPhases()!=null)
+            suggestTerms.addAll(object.getPhases().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}
+        try{
+            if(object.getAliases()!=null)
+            suggestTerms.addAll(object.getAliases());
+        }catch (Exception ignored){}try{
+            if(object.getFdaDesignations()!=null)
+            suggestTerms.addAll(object.getFdaDesignations().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getLocations()!=null)
+            suggestTerms.addAll(object.getLocations().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getTags()!=null) {
+                for(String tag:object.getTags()) {
+                    if(!tag.contains("DOID"))
+                    suggestTerms.add(StringUtils.capitalize(tag.toLowerCase().trim()));
+                    else  suggestTerms.add(tag);
+                }
+            }
+        }catch (Exception ignored){}try{
+            if(object.getStandardAges()!=null)
+            suggestTerms.addAll(object.getStandardAges().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getBrowseConditionTerms()!=null){
+                String[] browseConditionTerms=object.getBrowseConditionTerms().split("[,;]");
+                suggestTerms.addAll(Arrays.stream(browseConditionTerms).map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+            }
+        }catch (Exception ignored){}try{
+            if(object.getStatus()!=null)
+            suggestTerms.addAll(object.getStatus().stream().map(t->StringUtils.capitalize(t.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getCompoundName()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getCompoundName().trim().toLowerCase()));
+        }catch (Exception ignored){}try{
+            if(object.getEditorType()!=null)
+            suggestTerms.add(object.getEditorType());
+        }catch (Exception ignored){}try{
+            if(object.getDeliverySystem()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getDeliverySystem().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getInterventionName()!=null)
+            suggestTerms.add(object.getInterventionName());
+        }catch (Exception ignored){}try{
+            if(object.getTherapyRoute()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getTherapyRoute().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getTherapyType()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getTherapyType().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getVectorType()!=null)
+            suggestTerms.add(object.getVectorType());
+        }catch (Exception ignored){}try{
+            if(object.getDrugProductType()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getDrugProductType().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getDevelopmentStatus()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getDevelopmentStatus().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getEligibilitySex()!=null && !object.getEligibilitySex().equalsIgnoreCase("all"))
+            suggestTerms.add(object.getEligibilitySex());
+        }catch (Exception ignored){}try{
+            if(object.getIndications()!=null)
+            suggestTerms.addAll(object.getIndications().stream().map(i->StringUtils.capitalize(i.toLowerCase().trim())).collect(Collectors.toSet()));
+        }catch (Exception ignored){}try{
+            if(object.getMechanismOfAction()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getMechanismOfAction().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getRouteOfAdministration()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getRouteOfAdministration().toLowerCase().trim()));
+        }catch (Exception ignored){}try{
+            if(object.getSponsor()!=null)
+            suggestTerms.add(StringUtils.capitalize(object.getSponsor().trim().toLowerCase()));
+        }catch (Exception ignored){}try{
+            if(object.getTargetGeneOrVariant()!=null)
+            suggestTerms.add(object.getTargetGeneOrVariant());
+        }catch (Exception ignored){}try{
+            if(object.getTargetTissueOrCell()!=null)
+            suggestTerms.add(object.getTargetTissueOrCell());
+        }catch (Exception ignored){}
+        Map<String, Set<String>> suggestions=new HashMap<>();
+        if(suggestTerms.size()>0) {
+            suggestions.put("input", suggestTerms.stream().map(String::trim).collect(Collectors.toSet()));
+            object.setSuggest(suggestions);
+        }
+    }
+
+    public Set<String> getAbbreviationTags(String nctId,String tagType) throws Exception {
+        List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(nctId,tagType);
+
+        Set<String> tags=new HashSet<>();
+        for(ClinicalTrialAdditionalInfo info:additionalInfo){
+            List<String> defs=definitionDAO.getAbbreviation(info.getPropertyValue());
+            if(defs!=null && defs.size()>0){
+                tags.addAll(new HashSet<>(defs));
+
+            }
+        }
+        return tags;
+    }
+    public Set<String> getOntologyTags(String nctId,String indicationDOID, String tagType) throws Exception {
+        List<ClinicalTrialAdditionalInfo> additionalInfo=clinicalTrailDAO.getAdditionalInfo(nctId,tagType);
+
+        Set<String> tags=new HashSet<>();
+        tags.add(indicationDOID);
+        for(ClinicalTrialAdditionalInfo info:additionalInfo){
+            tags.add(info.getPropertyValue());
+        }
+        return tags;
     }
     public void formatRecordValue(ClinicalTrialRecord record){
         try {
@@ -456,7 +743,6 @@ public class ProcessFile {
         return  Arrays.stream(fieldVal.split(",")).map(str->StringUtils.capitalize(str.toLowerCase().trim().replaceAll("_", " "))).collect(Collectors.joining(", "));
     }
     public void indexClinicalTrailRecord(ClinicalTrialIndexObject record) throws IOException {
-
         JSONObject jsonObject = new JSONObject(record);
         IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
         ESClient.getClient().index(request, RequestOptions.DEFAULT);
@@ -466,11 +752,6 @@ public class ProcessFile {
     }
     public void updateClinicalTrailRecord(ClinicalTrialIndexObject record) throws Exception {
 
-//        JSONObject jsonObject = new JSONObject(record);
-//        IndexRequest request=   new IndexRequest(Index.getNewAlias()).source(jsonObject.toString(), XContentType.JSON);
-//        ESClient.getClient().index(request, RequestOptions.DEFAULT);
-//        RefreshRequest refreshRequest = new RefreshRequest();
-//        ESClient.getClient().indices().refresh(refreshRequest, RequestOptions.DEFAULT);
         IndexAdmin indexAdmin=new IndexAdmin();
         indexAdmin.updateIndex(SCGEContext.getESIndexName());
         if(BulkIndexProcessor.bulkProcessor==null){
