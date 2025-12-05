@@ -1,2 +1,2 @@
-# clinical-trails-pipeline
-Pipeline to index gene therapy clinical trails
+# clinical-trails-pipeline 
+Gene therapy clinical trails pipeline

@@ -7,8 +7,8 @@ apply plugin: 'application'
 version '1.0-SNAPSHOT'
 mainClassName="edu.mcw.scge.platform.Main"
 String myAppName="clinical-trials-pipeline"
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = 17
+targetCompatibility = 17
 repositories {
     mavenCentral()
 }
@@ -26,13 +26,6 @@ dependencies {
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.7'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
 
-    implementation group: 'org.elasticsearch', name: 'elasticsearch', version: '7.17.4'
-    implementation group: 'org.elasticsearch.client', name: 'transport', version: '7.17.4'
-    implementation group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.17.4'
-    implementation group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.17.4'
-
-
-    implementation group: 'org.apache.lucene', name: 'lucene-core', version: '8.2.0'
     implementation group: 'org.springframework', name: 'spring-beans', version: '5.1.9.RELEASE'
     implementation group: 'org.springframework', name: 'spring-jdbc', version: '5.1.9.RELEASE'
     implementation group: 'org.springframework', name: 'spring-core', version: '5.1.9.RELEASE'
