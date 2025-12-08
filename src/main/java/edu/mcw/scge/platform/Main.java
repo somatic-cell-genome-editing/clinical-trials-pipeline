@@ -181,7 +181,7 @@ public class Main {
                     String nctId=identificationModule.getString("nctId");
                     if(nctId!=null && !nctId.equals("")){
 
-                        clinicalTrailDAO.insertClinicalTrialAPIObject(o.toString(), nctId);
+                        clinicalTrailDAO.insertClinicalTrialAPIObject(o.toString(), nctId, "api");
                         nctIds.add(nctId);}
 
                 }
