@@ -1,5 +1,6 @@
 package edu.mcw.scge.platform.utils;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.HttpClientErrorException;
@@ -7,6 +8,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResponseErrorHandler;
 
 import java.io.IOException;
+import java.net.URI;
 
 public class ApiResponseErrorHandler implements ResponseErrorHandler {
     @Override
@@ -15,7 +17,7 @@ public class ApiResponseErrorHandler implements ResponseErrorHandler {
     }
 
     @Override
-    public void handleError(ClientHttpResponse response) throws IOException {
+    public void handleError(URI url, HttpMethod method, ClientHttpResponse response) throws IOException {
         if (response.getStatusCode().is4xxClientError()) {
             // Handle 4xx errors
             if (response.getStatusCode() == HttpStatus.NOT_FOUND) {

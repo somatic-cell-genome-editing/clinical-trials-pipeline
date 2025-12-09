@@ -12,9 +12,13 @@ import edu.mcw.scge.process.Utils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
 
 
 import java.io.IOException;
@@ -125,8 +129,8 @@ public class Main {
 
     public void download() throws IOException {
 
-     //   String baseURI="https://clinicaltrials.gov/api/v2/studies?pageSize=10&countTotal=true&query.term=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.intr=Gene+Therapy";
-     //  String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(gene+therapy+OR+gene+editing)&query.intr=BIOLOGICAL&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&countTotal=true";
+        //   String baseURI="https://clinicaltrials.gov/api/v2/studies?pageSize=10&countTotal=true&query.term=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.intr=Gene+Therapy";
+        //  String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(gene+therapy+OR+gene+editing)&query.intr=BIOLOGICAL&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&countTotal=true";
 //       String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&query.intr=(BIOLOGICAL OR GENETIC OR GENE THERAPY OR GENE EDITING)&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.term=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&countTotal=true"
 ////               "&postFilter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-15,MAX]D"
 //              ;
@@ -142,49 +146,58 @@ public class Main {
 //        String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true&query.intr=Gene+Therapy" +
 //                "&query.term=gene+therapy" +
 //                "&filter.advanced=+AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
-        String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true" ;
-//                "&query.term=AREA[protocolSection.descriptionModule.briefSummary]gene therapy OR AREA[InterventionSearch]gene therapy OR AREA[InterventionSearch]gene transfer OR AREA[InterventionSearch]gene editing" +
-//                " OR AREA[EligibilitySearch]gene therapy OR AREA[EligibilitySearch]gene transfer OR AREA[EligibilitySearch]gene editing OR AREA[ConditionSearch]gene transfer OR AREA[ConditionSearch]gene editing "
-//              +  "&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true"+
-//
-//                "&filter.advanced=+AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
+        String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true" +
+                "&query.term=" +
+                "AREA[protocolSection.descriptionModule.briefSummary](gene therapy OR gene transfer OR gene editing OR viral vector OR AAV OR adeno-associated OR lentiviral OR CRISPR OR CAR-T OR CAR T-cell OR cell therapy OR antisense OR siRNA OR mRNA therapy OR oligonucleotide) OR " +
+                "AREA[protocolSection.descriptionModule.detailedDescription](gene therapy OR gene transfer OR gene editing OR viral vector OR AAV OR CRISPR OR CAR-T) OR " +
+                "AREA[protocolSection.identificationModule.officialTitle](gene therapy OR gene transfer OR gene editing OR AAV OR CRISPR OR CAR-T) OR " +
+                "AREA[InterventionSearch](gene therapy OR gene transfer OR gene editing OR viral vector OR AAV OR lentiviral OR CRISPR OR CAR-T OR antisense OR siRNA OR mRNA) OR " +
+                "AREA[ConditionSearch](gene therapy OR gene transfer OR gene editing)" +
+                "&filter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
 
 
-//        String nextPageToken=null;
-//        do {
-//            String fetchUri=null;
-//            RestClient restClient = RestClient.builder()
-//                    .requestFactory(new HttpComponentsClientHttpRequestFactory())
-//                    .baseUrl("https://clinicaltrials.gov/api/v2")
-//                    .build();
-//            if(nextPageToken!=null){
-//               fetchUri=baseURI+"&pageToken="+nextPageToken;
-//            }else fetchUri=baseURI;
-//            try {
-//                String responseStr = restClient.get()
-//                        .uri(fetchUri)
-//                        .retrieve()
-//                        .body(String.class);
-//                if (responseStr != null) {
-//                    JSONObject jsonObject = new JSONObject(responseStr);
-//                    JSONArray array = (JSONArray) jsonObject.get("studies");
-//                    for (Object object : array) {
-//                        //    System.out.println(object);
-//                        indexer.indexDocuments(object);
-//                    }
-//                    try {
-//                        nextPageToken = jsonObject.get("nextPageToken") != null ? (String) jsonObject.get("nextPageToken") : null;
-//                    } catch (Exception e) {
-//                        nextPageToken = null;
-//                        e.printStackTrace();
-//                    }
-//
-//
-//                }
-//            }catch (Exception exception){
-//                exception.printStackTrace();
-//            }
-//        }while(nextPageToken!=null);
+        Set<String> nctIds=new HashSet<>();
+        String nextPageToken=null;
+        do {
+            String fetchUri=null;
+            RestClient restClient = RestClient.builder()
+                    .requestFactory(new HttpComponentsClientHttpRequestFactory())
+                    .baseUrl("https://clinicaltrials.gov/api/v2")
+                    .build();
+            if(nextPageToken!=null){
+                fetchUri=baseURI+"&pageToken="+nextPageToken;
+            }else fetchUri=baseURI;
+            try {
+                String responseStr = restClient.get()
+                        .uri(fetchUri)
+                        .retrieve()
+                        .body(String.class);
+                JSONObject jsonObject = new JSONObject(responseStr);
+                JSONArray array =  jsonObject.getJSONArray("studies");
+                for (int i=0;i<array.length();i++) {
+                    JSONObject o = array.getJSONObject(i);
+                    JSONObject protocolSection = o.getJSONObject("protocolSection");
+                    JSONObject identificationModule = protocolSection.getJSONObject("identificationModule");
+                    String nctId=identificationModule.getString("nctId");
+                    if(nctId!=null && !nctId.equals("")){
+
+                        clinicalTrailDAO.insertClinicalTrialAPIObject(o.toString(), nctId, "api");
+                        nctIds.add(nctId);}
+
+                }
+                try {
+                    nextPageToken = jsonObject.get("nextPageToken") != null ? (String) jsonObject.get("nextPageToken") : null;
+                } catch (Exception e) {
+                    nextPageToken = null;
+                    e.printStackTrace();
+                }
+
+
+            }catch (Exception exception){
+                exception.printStackTrace();
+            }
+        }while(nextPageToken!=null);
+        System.out.println("NCTIDS:"+ nctIds.size());
     }
     public void setVersion(String version) {
     }
