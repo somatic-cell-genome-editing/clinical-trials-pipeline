@@ -153,7 +153,6 @@ public class Main {
                 "AREA[protocolSection.identificationModule.officialTitle](gene therapy OR gene transfer OR gene editing OR AAV OR CRISPR OR CAR-T) OR " +
                 "AREA[InterventionSearch](gene therapy OR gene transfer OR gene editing OR CRISPR OR CAR-T) OR " +
                 "AREA[ConditionSearch](gene therapy OR gene transfer OR gene editing)" +
-                "&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true"+
                 "&filter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
 
 
