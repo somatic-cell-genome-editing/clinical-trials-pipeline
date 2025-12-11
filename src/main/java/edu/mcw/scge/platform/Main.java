@@ -150,9 +150,10 @@ public class Main {
                 "&query.term=" +
                 "AREA[protocolSection.descriptionModule.briefSummary](gene therapy OR gene transfer OR gene editing OR CRISPR OR CAR-T OR CAR T-cell OR cell therapy OR antisense OR siRNA OR mRNA therapy OR oligonucleotide) OR " +
                 "AREA[protocolSection.descriptionModule.detailedDescription](gene therapy OR gene transfer OR gene editing OR CRISPR OR CAR-T) OR " +
-                "AREA[protocolSection.identificationModule.officialTitle](gene therapy OR gene transfer OR gene editing OR AAV OR CRISPR OR CAR-T) OR " +
+                "AREA[protocolSection.identificationModule.officialTitle](gene therapy OR gene transfer OR gene editing OR CRISPR OR CAR-T) OR " +
                 "AREA[InterventionSearch](gene therapy OR gene transfer OR gene editing OR CRISPR OR CAR-T) OR " +
                 "AREA[ConditionSearch](gene therapy OR gene transfer OR gene editing)" +
+                "&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true"+
                 "&filter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
 
 
