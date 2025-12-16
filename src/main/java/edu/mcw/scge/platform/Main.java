@@ -34,7 +34,7 @@ public class Main {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     ProcessFile fileProcess=new ProcessFile();
     OntologyProcessor ontologyProcessor=new OntologyProcessor();
-    protected static Logger logger= LogManager.getLogger();
+    protected static Logger logger= LogManager.getLogger(Main.class);
     public static void main(String[] args) throws IOException {
 
         DefaultListableBeanFactory bf= new DefaultListableBeanFactory();
@@ -126,23 +126,6 @@ public class Main {
 
     public void download() throws IOException {
 
-        //   String baseURI="https://clinicaltrials.gov/api/v2/studies?pageSize=10&countTotal=true&query.term=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.intr=Gene+Therapy";
-        //  String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(gene+therapy+OR+gene+editing)&query.intr=BIOLOGICAL&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&countTotal=true";
-//       String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&query.intr=(BIOLOGICAL OR GENETIC OR GENE THERAPY OR GENE EDITING)&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.term=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&countTotal=true"
-////               "&postFilter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-15,MAX]D"
-//              ;
-
-//        String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=AREA[ConditionSearch](Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&query.term=AREA[BasicSearch](Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL) OR AREA[protocolSection.descriptionModule.detailedDescription](Gene Therapy, Gene Edit)&query.intr=AREA[InterventionSearch](GENETIC OR BIOLOGICAL OR Gene Therapy OR Gene Editing)" +
-//                "&postFilter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-15,2024-04-23] AND AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true" +
-//                "&countTotal=true";
-        //&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true
-//        String baseURI="https://clinicaltrials.gov/api/v2/studies?query.intr=AREA[InterventionSearch](GENETIC OR BIOLOGICAL OR Gene Therapy OR Gene Editing)" +
-//                "&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true" +
-//                "&query.term=AREA[LastUpdatePostDate]RANGE[2023-01-15,2024-04-23]" +
-//                "&countTotal=true";
-//        String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true&query.intr=Gene+Therapy" +
-//                "&query.term=gene+therapy" +
-//                "&filter.advanced=+AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
         String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true" +
                 "&query.term=" +
                 "AREA[protocolSection.descriptionModule.briefSummary](gene therapy OR gene transfer OR gene editing OR CRISPR OR CAR-T OR CAR T-cell OR cell therapy OR antisense OR siRNA OR mRNA therapy OR oligonucleotide) OR " +
