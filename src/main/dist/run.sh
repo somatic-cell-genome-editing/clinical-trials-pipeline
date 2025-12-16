@@ -1,4 +1,5 @@
 . /etc/profile
+source ~/.bashrc
 export FILE_NAME="/data/GT_tracker_release2_WIP.xlsx"
 APPNAME=clinical-trials-pipeline
 APPDIR=/data/pipelines/$APPNAME
