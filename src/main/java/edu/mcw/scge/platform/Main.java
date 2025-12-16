@@ -122,10 +122,7 @@ public class Main {
         logger.info("Download from API and Upload to DB is DONE!!");
     }
 
-    public boolean existsRecord(String nctId) throws Exception {
-       List<ClinicalTrialRecord> records= clinicalTrailDAO.getClinicalTrailRecordByNctId(nctId);
-       return records.size() > 0;
-    }
+
 
     public void download() throws IOException {
 

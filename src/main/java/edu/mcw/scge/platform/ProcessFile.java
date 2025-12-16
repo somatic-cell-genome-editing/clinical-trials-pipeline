@@ -451,9 +451,9 @@ public class ProcessFile {
 
     }
     public String getInterventionDescription(String nctId) throws Exception {
-      List<ClinicalTrialRecord> records=  clinicalTrailDAO.getClinicalTrailRecordByNctId(nctId);
-      if(records!=null && records.size()>0){
-          return records.get(0).getInterventionDescription();
+      ClinicalTrialRecord record=  clinicalTrailDAO.getSingleClinicalTrailRecordByNctId(nctId);
+      if(record!=null ){
+          return record.getInterventionDescription();
       }
         return null;
     }
