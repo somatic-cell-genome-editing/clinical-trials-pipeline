@@ -93,6 +93,14 @@ public class Main {
             case "update-ontology-terms" :
                 ontologyProcessor.uploadParentTerms();
                 break;
+            case "update-ct-status" :
+                String recordStatus = "NotForCuration";
+                /* read from CSV file and update clinical trial record status in DB */
+                String csvFile = "data/platform-ct-status.csv";
+                logger.info("Updating clinical trial status from CSV: " + csvFile);
+                fileProcess.parseCSVAndUpdateStatus(csvFile, recordStatus);
+                logger.info("Clinical trial status update from CSV is DONE!!");
+                break;
             default :
         }
 

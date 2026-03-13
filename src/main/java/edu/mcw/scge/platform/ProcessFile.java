@@ -29,8 +29,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONObject;
 
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -487,6 +486,65 @@ public class ProcessFile {
         parseFileAndMapDB(file, "all data");
     }
 
+
+    public void parseCSVAndUpdateStatus(String csvFile, String recordStatus) throws Exception {
+
+        System.out.println("Processing CSV file to update clinical trial status fields: " + csvFile);
+        BufferedReader br = new BufferedReader(new FileReader(csvFile));
+        String line;
+        int rowNum = 0;
+        while ((line = br.readLine()) != null) {
+            rowNum++;
+            if (rowNum == 1) {
+                // skip header row
+                continue;
+            }
+            List<String> fields = parseCSVLine(line);
+            if (fields.size() < 19) {
+                continue;
+            }
+            String nctId = fields.get(0).trim();
+            if (nctId == null || nctId.isEmpty() || nctId.equals("null")) {
+                continue;
+            }
+
+
+
+
+            ClinicalTrialRecord record = new ClinicalTrialRecord();
+            record.setNctId(nctId);
+            record.setRecordStatus(recordStatus);
+
+            try {
+                System.out.println("ROW " + rowNum + "\t" + nctId + "\tRecord Status:"+recordStatus);
+                clinicalTrailDAO.updateRecordStatus(record);
+            } catch (Exception e) {
+                System.out.println("Error updating: " + nctId);
+                e.printStackTrace();
+            }
+        }
+        br.close();
+        System.out.println("CSV status update complete. Processed " + (rowNum - 1) + " records.");
+    }
+
+    private List<String> parseCSVLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                fields.add(current.toString());
+                current = new StringBuilder();
+            } else {
+                current.append(c);
+            }
+        }
+        fields.add(current.toString());
+        return fields;
+    }
 
     public String formatFieldVal(String fieldVal){
         return  Arrays.stream(fieldVal.split(",")).map(str->StringUtils.capitalize(str.toLowerCase().trim().replaceAll("_", " "))).collect(Collectors.joining(", "));
