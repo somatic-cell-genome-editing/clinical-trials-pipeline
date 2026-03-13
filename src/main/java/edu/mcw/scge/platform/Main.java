@@ -34,7 +34,7 @@ public class Main {
     ClinicalTrailDAO clinicalTrailDAO=new ClinicalTrailDAO();
     ProcessFile fileProcess=new ProcessFile();
     OntologyProcessor ontologyProcessor=new OntologyProcessor();
-    protected static Logger logger= LogManager.getLogger();
+    protected static Logger logger= LogManager.getLogger(Main.class);
     public static void main(String[] args) throws IOException {
 
         DefaultListableBeanFactory bf= new DefaultListableBeanFactory();
@@ -93,6 +93,14 @@ public class Main {
             case "update-ontology-terms" :
                 ontologyProcessor.uploadParentTerms();
                 break;
+            case "update-ct-status" :
+                String recordStatus = "NotForCuration";
+                /* read from CSV file and update clinical trial record status in DB */
+                String csvFile = "data/platform-ct-status.csv";
+                logger.info("Updating clinical trial status from CSV: " + csvFile);
+                fileProcess.parseCSVAndUpdateStatus(csvFile, recordStatus);
+                logger.info("Clinical trial status update from CSV is DONE!!");
+                break;
             default :
         }
 
@@ -122,37 +130,18 @@ public class Main {
         logger.info("Download from API and Upload to DB is DONE!!");
     }
 
-    public boolean existsRecord(String nctId) throws Exception {
-       List<ClinicalTrialRecord> records= clinicalTrailDAO.getClinicalTrailRecordByNctId(nctId);
-       return records.size() > 0;
-    }
+
 
     public void download() throws IOException {
 
-        //   String baseURI="https://clinicaltrials.gov/api/v2/studies?pageSize=10&countTotal=true&query.term=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.intr=Gene+Therapy";
-        //  String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(gene+therapy+OR+gene+editing)&query.intr=BIOLOGICAL&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&countTotal=true";
-//       String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&query.intr=(BIOLOGICAL OR GENETIC OR GENE THERAPY OR GENE EDITING)&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true&query.term=(Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&countTotal=true"
-////               "&postFilter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-15,MAX]D"
-//              ;
-
-//        String baseURI="https://clinicaltrials.gov/api/v2/studies?query.cond=AREA[ConditionSearch](Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL)&query.term=AREA[BasicSearch](Gene Therapy OR Gene Editing OR GENETIC OR BIOLOGICAL) OR AREA[protocolSection.descriptionModule.detailedDescription](Gene Therapy, Gene Edit)&query.intr=AREA[InterventionSearch](GENETIC OR BIOLOGICAL OR Gene Therapy OR Gene Editing)" +
-//                "&postFilter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-15,2024-04-23] AND AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true" +
-//                "&countTotal=true";
-        //&filter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true
-//        String baseURI="https://clinicaltrials.gov/api/v2/studies?query.intr=AREA[InterventionSearch](GENETIC OR BIOLOGICAL OR Gene Therapy OR Gene Editing)" +
-//                "&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true" +
-//                "&query.term=AREA[LastUpdatePostDate]RANGE[2023-01-15,2024-04-23]" +
-//                "&countTotal=true";
-//        String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true&query.intr=Gene+Therapy" +
-//                "&query.term=gene+therapy" +
-//                "&filter.advanced=+AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
         String baseURI="https://clinicaltrials.gov/api/v2/studies?countTotal=true" +
                 "&query.term=" +
-                "AREA[protocolSection.descriptionModule.briefSummary](gene therapy OR gene transfer OR gene editing OR viral vector OR AAV OR adeno-associated OR lentiviral OR CRISPR OR CAR-T OR CAR T-cell OR cell therapy OR antisense OR siRNA OR mRNA therapy OR oligonucleotide) OR " +
-                "AREA[protocolSection.descriptionModule.detailedDescription](gene therapy OR gene transfer OR gene editing OR viral vector OR AAV OR CRISPR OR CAR-T) OR " +
-                "AREA[protocolSection.identificationModule.officialTitle](gene therapy OR gene transfer OR gene editing OR AAV OR CRISPR OR CAR-T) OR " +
-                "AREA[InterventionSearch](gene therapy OR gene transfer OR gene editing OR viral vector OR AAV OR lentiviral OR CRISPR OR CAR-T OR antisense OR siRNA OR mRNA) OR " +
+                "AREA[protocolSection.descriptionModule.briefSummary](gene therapy OR gene transfer OR gene editing OR CRISPR ) OR " +
+                "AREA[protocolSection.descriptionModule.detailedDescription](gene therapy OR gene transfer OR gene editing OR CRISPR) OR " +
+                "AREA[protocolSection.identificationModule.officialTitle](gene therapy OR gene transfer OR gene editing OR CRISPR) OR " +
+                "AREA[InterventionSearch](gene therapy OR gene transfer OR gene editing OR CRISPR) OR " +
                 "AREA[ConditionSearch](gene therapy OR gene transfer OR gene editing)" +
+                "&postFilter.advanced=AREA[protocolSection.oversightModule.isFdaRegulatedDrug]true"+
                 "&filter.advanced=AREA[LastUpdatePostDate]RANGE[2023-01-01, MAX]";
 
 
@@ -181,7 +170,7 @@ public class Main {
                     String nctId=identificationModule.getString("nctId");
                     if(nctId!=null && !nctId.equals("")){
 
-                        clinicalTrailDAO.insertClinicalTrialAPIObject(o.toString(), nctId, "api");
+                      clinicalTrailDAO.insertClinicalTrialAPIObject(o.toString(), nctId, "api");
                         nctIds.add(nctId);}
 
                 }
